@@ -203,12 +203,179 @@ int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script)
     return ret;
 }
 
+// BSP object and lua table
+static void _push_value_to_lua(lua_State *s, BSP_VALUE *val);
+static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj);
+
+static void _push_value_to_lua(lua_State *s, BSP_VALUE *val)
+{
+    if (!s)
+    {
+        return;
+    }
+
+    if (!val)
+    {
+        lua_pushnil(s);
+
+        return;
+    }
+
+    BSP_STRING *str = NULL;
+    BSP_OBJECT *sub_obj = NULL;
+    switch (val->type)
+    {
+        case BSP_VALUE_INT8 : 
+        case BSP_VALUE_INT16 : 
+        case BSP_VALUE_INT32 : 
+        case BSP_VALUE_INT64 : 
+        case BSP_VALUE_INT29 : 
+        case BSP_VALUE_INT : 
+        case BSP_VALUE_UINT8 : 
+        case BSP_VALUE_UINT16 : 
+        case BSP_VALUE_UINT32 : 
+        case BSP_VALUE_UINT64 : 
+            lua_pushinteger(s, (lua_Integer) V_GET_INT(val));
+            break;
+        case BSP_VALUE_FLOAT : 
+        case BSP_VALUE_DOUBLE : 
+            lua_pushnumber(s, (lua_Number) V_GET_FLOAT(val));
+            break;
+        case BSP_VALUE_BOOLEAN : 
+            lua_pushboolean(s, (int) V_GET_BOOLEAN(val));
+            break;
+        case BSP_VALUE_STRING : 
+            str = V_GET_STRING(val);
+            if (str && STR_STR(str))
+            {
+                lua_pushlstring(s, STR_STR(str), STR_LEN(str));
+            }
+            else
+            {
+                lua_pushnil(s);
+            }
+            break;
+        case BSP_VALUE_OBJECT : 
+            sub_obj = V_GET_OBJECT(val);
+            if (sub_obj)
+            {
+                _push_object_to_lua(s, sub_obj);
+            }
+            else
+            {
+                lua_pushnil(s);
+            }
+            break;
+        case BSP_VALUE_POINTER : 
+            lua_pushlightuserdata(s, V_GET_POINTER(val));
+            break;
+        case BSP_VALUE_NULL : 
+        case BSP_VALUE_UNKNOWN : 
+        default : 
+            lua_pushnil(s);
+            break;
+    }
+
+    return;
+}
+
+static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj)
+{
+    if (!s)
+    {
+        return;
+    }
+
+    if (!obj)
+    {
+        lua_pushnil(s);
+
+        return;
+    }
+
+    BSP_VALUE *val = NULL;
+    BSP_STRING *key = NULL;
+    size_t idx, total;
+    bsp_spin_lock(&obj->lock);
+    bsp_object_reset(obj);
+    lua_checkstack(s, 1);
+    switch (obj->type)
+    {
+        case BSP_OBJECT_SINGLE : 
+            // Single value
+            val = bsp_object_value_single(obj);
+            _push_value_to_lua(s, val);
+            break;
+        case BSP_OBJECT_ARRAY : 
+            // Array
+            total = bsp_object_size(obj);
+            lua_newtable(s);
+            for (idx = 0; idx < total; idx ++)
+            {
+                lua_checkstack(s, 2);
+                lua_pushinteger(s, (lua_Integer) idx + 1);
+                val = bsp_object_value_array(obj, idx);
+                if (val)
+                {
+                    _push_value_to_lua(s, val);
+                }
+                else
+                {
+                    lua_pushnil(s);
+                }
+
+                lua_settable(s, -3);
+            }
+            break;
+        case BSP_OBJECT_HASH : 
+            // Hash
+            val = bsp_object_curr(obj, (void **) &key);
+            while (val)
+            {
+                if (key)
+                {
+                    lua_checkstack(s, 2);
+                    lua_pushlstring(s, STR_STR(key), STR_LEN(key));
+                    _push_value_to_lua(s, val);
+                }
+
+                bsp_object_next(obj);
+                val = bsp_object_curr(obj, (void **) &key);
+            }
+
+            break;
+        case BSP_OBJECT_UNDETERMINED : 
+        default : 
+            break;
+    }
+    bsp_spin_unlock(&obj->lock);
+
+    return;
+}
+
+void object_to_lua(lua_State *s, BSP_OBJECT *obj)
+{
+    if (!s || !obj)
+    {
+        return;
+    }
+
+    _push_object_to_lua(s, obj);
+
+    return;
+}
+
+BSP_OBJECT * lua_to_object(lua_State *s)
+{
+    return NULL;
+}
+
+// Call lua function
 static int _cont()
 {
     return 0;
 }
 
-// Call lua function
 int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 {
     if (!scrt || !scrt->state || !task)
@@ -246,9 +413,12 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     switch (task->type)
     {
         case BSPD_TASK_CTL : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
+            nargs = 1;
             break;
         case BSPD_TASK_RAW : 
         case BSPD_TASK_STREAM : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             str = (BSP_STRING *) task->ptr;
             if (str)
             {
@@ -259,27 +429,14 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
                 lua_pushnil(scrt->state);
             }
 
-            nargs = 1;
+            nargs = 2;
             break;
         case BSPD_TASK_OBJECT : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             obj = (BSP_OBJECT *) task->ptr;
             if (obj)
             {
-                // object_to_lua_table(scrt->state, obj);
-            }
-            else
-            {
-                lua_pushnil(scrt->state);
-            }
-
-            nargs = 1;
-            break;
-        case BSPD_TASK_COMMAND : 
-            lua_pushinteger(scrt->state, task->cmd);
-            obj = (BSP_OBJECT *) task->ptr;
-            if (obj)
-            {
-                // object_to_lua_table(scrt->state, obj);
+                object_to_lua(scrt->state, obj);
             }
             else
             {
@@ -287,6 +444,21 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
             }
 
             nargs = 2;
+            break;
+        case BSPD_TASK_COMMAND : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
+            lua_pushinteger(scrt->state, task->cmd);
+            obj = (BSP_OBJECT *) task->ptr;
+            if (obj)
+            {
+                object_to_lua(scrt->state, obj);
+            }
+            else
+            {
+                lua_pushnil(scrt->state);
+            }
+
+            nargs = 3;
             break;
         case BSPD_TASK_LOAD : 
         default : 
@@ -346,7 +518,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 }
 
 // Create a new task
-BSPD_SCRIPT_TASK * script_new_task(BSPD_SCRIPT_TASK_TYPE type)
+BSPD_SCRIPT_TASK * new_script_task(BSPD_SCRIPT_TASK_TYPE type)
 {
     BSPD_SCRIPT_TASK *task = bsp_mempool_alloc(mp_task);
     if (task)
@@ -359,8 +531,13 @@ BSPD_SCRIPT_TASK * script_new_task(BSPD_SCRIPT_TASK_TYPE type)
 }
 
 // Free task
-void script_del_task(BSPD_SCRIPT_TASK *task)
+void del_script_task(BSPD_SCRIPT_TASK *task)
 {
+    if (!task)
+    {
+        return;
+    }
+
     BSP_STRING *str = NULL;
     BSP_OBJECT *obj = NULL;
     switch (task->type)
@@ -392,6 +569,12 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
         return BSP_RTN_INVALID;
     }
 
+    BSP_THREAD *t = bsp_select_thread(BSP_THREAD_WORKER);
+    if (!t)
+    {
+        return BSP_RTN_ERR_THREAD;
+    }
+
     bsp_spin_lock(&task_queue_lock);
     if (!task_queue_head)
     {
@@ -409,6 +592,7 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
     }
 
     // Tell worker
+    bsp_poke_event_container(t->event_container);
     bsp_spin_unlock(&task_queue_lock);
 
     return BSP_RTN_SUCCESS;
@@ -428,11 +612,6 @@ BSPD_SCRIPT_TASK * pop_script_task()
             // Queue empty
             task_queue_tail = NULL;
         }
-    }
-
-    // Tell worker
-    if (task_queue_head)
-    {
     }
 
     bsp_spin_unlock(&task_queue_lock);

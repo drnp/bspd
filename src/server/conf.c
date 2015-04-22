@@ -211,7 +211,7 @@ static struct bspd_server_t * _parse_conf_server(BSP_OBJECT *desc)
         str = V_GET_STRING(node);
         if (str)
         {
-            ret->prop.lua_hook_connect = bsp_strndup(STR_STR(str), STR_LEN(str));
+            ret->prop.lua_hook_disconnect = bsp_strndup(STR_STR(str), STR_LEN(str));
         }
     }
 

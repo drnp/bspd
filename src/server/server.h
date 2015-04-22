@@ -42,7 +42,7 @@
 
 #define _SERVER_H
 
-// 2bits
+// Server type
 typedef enum bspd_server_type_e
 {
     BSPD_SERVER_INTERNAL
@@ -57,7 +57,7 @@ typedef enum bspd_server_type_e
 #define BSPD_SERVER_WEBSOCKET           BSPD_SERVER_WEBSOCKET
 } BSPD_SERVER_TYPE;
 
-// 1bit
+// Data type
 typedef enum bspd_data_type_e
 {
     BSPD_DATA_RAW       = 0, 
@@ -66,7 +66,7 @@ typedef enum bspd_data_type_e
 #define BSPD_DATA_PACKET                BSPD_DATA_PACKET
 } BSPD_DATA_TYPE;
 
-// 2bits
+// Packet type (in header : 2 bits)
 typedef enum bspd_packet_type_e
 {
     BSPD_PACKET_CTL     = 0, 
@@ -91,7 +91,7 @@ typedef enum bspd_control_packet_type_e
 #define BSPD_CTL_SPEC                   BSPD_CTL_SPEC
 } BSPD_CTL_TYPE;
 
-// 3bits
+// Serialize type (in header : 3 bits)
 typedef enum bspd_serialize_type_e
 {
     BSPD_SERIALIZE_NATIVE
@@ -106,7 +106,7 @@ typedef enum bspd_serialize_type_e
 #define BSPD_SERIALIZE_AMF3             BSPD_SERIALIZE_AMF3
     BSPD_SERIALIZE_PROTOBUF
                         = 4, 
-#define BSPD_SERIALIZE_PROTOBUF         BSPD_SERIALIZE_PROTOBOF
+#define BSPD_SERIALIZE_PROTOBUF         BSPD_SERIALIZE_PROTOBUF
     BSPD_SERIALIZE_THRIFT
                         = 5, 
 #define BSPD_SERIALIZE_THRIFT           BSPD_SERIALIZE_THRIFT
@@ -118,7 +118,7 @@ typedef enum bspd_serialize_type_e
 #define BSPD_SERIALIZE_HESSIAN2         BSPD_SERIALIZE_HESSIAN2
 } BSPD_SERIALIZE_TYPE;
 
-// 2bits
+// Compress type (in header : 2 bits)
 typedef enum bspd_compress_type_e
 {
     BSPD_COMPRESS_NONE  = 0, 
@@ -131,7 +131,7 @@ typedef enum bspd_compress_type_e
     BSPD_COMPRESS_SNAPPY
                         = 3, 
 #define BSPD_COMPRESS_SNAPPY            BSPD_COMPRESS_SNAPPY
-} BSPD_COMPRES_TYPE;
+} BSPD_COMPRESS_TYPE;
 
 typedef enum bspd_server_event_hook_e
 {
@@ -250,6 +250,7 @@ typedef struct bspd_script_task_t
                         type;
     const char          *func;
     int                 ref;
+    int                 clt;
     int                 cmd;
     void                *ptr;
     struct bspd_script_task_t
@@ -276,9 +277,11 @@ BSPD_SCRIPT * new_script_container();
 int del_script_container(BSPD_SCRIPT *scrt);
 int load_script_file(BSPD_SCRIPT *scrt, const char *script_filename);
 int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script);
+void object_to_lua(lua_State *s, BSP_OBJECT *obj);
+BSP_OBJECT * lua_to_object(lua_State *s);
 int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task);
-BSPD_SCRIPT_TASK * script_new_task(BSPD_SCRIPT_TASK_TYPE type);
-void script_del_task(BSPD_SCRIPT_TASK *task);
+BSPD_SCRIPT_TASK * new_script_task(BSPD_SCRIPT_TASK_TYPE type);
+void del_script_task(BSPD_SCRIPT_TASK *task);
 int push_script_task(BSPD_SCRIPT_TASK *task);
 BSPD_SCRIPT_TASK * pop_script_task();
 
