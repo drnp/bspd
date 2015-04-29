@@ -64,6 +64,7 @@ AC_CACHE_CHECK(
 AC_DEFINE_UNQUOTED([BSPD_PREFIX_DIR], ["$prefix"], [Prefix directory of BSP application])
 AC_DEFINE_UNQUOTED([BSPD_CONF_FILE], ["etc/bspd.runtime.conf"], [Configuration of BSP application])
 
+AC_CONFIG_FILES([deps/snappy/snappy-stubs-public.h])
 AC_OUTPUT([
 Makefile
 deps/Makefile
