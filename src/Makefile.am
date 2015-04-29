@@ -26,8 +26,10 @@ bspd_SOURCES = \
 	server/main.c \
 	server/conf.c \
 	server/script.c \
-	server/session.c \
+	server/clients.c \
 	server/server.h \
+	wrapper/standard.c \
+	wrapper/wrapper.h \
 	bspd.c \
 	bspd.h
 

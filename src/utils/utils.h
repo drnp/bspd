@@ -45,6 +45,7 @@
 void debug_object(BSP_OBJECT *obj);
 void debug_value(BSP_VALUE *val);
 void debug_hex(const char *data, size_t len);
+void debug_lua_stack(lua_State *s);
 void show_trace(BSP_TRACE *bt);
 
 #endif  /* _UTILS_H */

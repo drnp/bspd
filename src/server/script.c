@@ -203,6 +203,25 @@ int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script)
     return ret;
 }
 
+// Real length of LUA table
+inline size_t lua_table_size(lua_State *s, int idx)
+{
+    size_t ret = 0;
+    idx = lua_absindex(s, idx);
+    if (s && lua_istable(s, idx))
+    {
+        lua_checkstack(s, 2);
+        lua_pushnil(s);
+        while (0 != lua_next(s, idx))
+        {
+            ret ++;
+            lua_pop(s, 1);
+        }
+    }
+
+    return ret;
+}
+
 // BSP object and lua table
 static void _push_value_to_lua(lua_State *s, BSP_VALUE *val);
 static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj);
@@ -329,6 +348,7 @@ static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj)
             break;
         case BSP_OBJECT_HASH : 
             // Hash
+            lua_newtable(s);
             val = bsp_object_curr(obj, (void **) &key);
             while (val)
             {
@@ -337,6 +357,7 @@ static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj)
                     lua_checkstack(s, 2);
                     lua_pushlstring(s, STR_STR(key), STR_LEN(key));
                     _push_value_to_lua(s, val);
+                    lua_settable(s, -3);
                 }
 
                 bsp_object_next(obj);
@@ -365,9 +386,157 @@ void object_to_lua(lua_State *s, BSP_OBJECT *obj)
     return;
 }
 
-BSP_OBJECT * lua_to_object(lua_State *s)
+static BSP_VALUE * _lua_value_to_value(lua_State *s, int idx);
+static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx);
+
+static BSP_VALUE * _lua_value_to_value(lua_State *s, int idx)
 {
-    return NULL;
+    if (!s)
+    {
+        return NULL;
+    }
+
+    idx = lua_absindex(s, idx);
+    BSP_VALUE *ret = bsp_new_value();
+    if (!ret)
+    {
+        return NULL;
+    }
+
+    lua_Number v_number = 0;
+    int v_boolean = 0;
+    size_t str_len = 0;
+    const char *str = NULL;
+    void *v_ptr = NULL;
+    BSP_STRING *v_str = NULL;
+    BSP_OBJECT *v_obj = NULL;
+    switch (lua_type(s, idx))
+    {
+        case LUA_TNIL : 
+            V_SET_NULL(ret);
+            break;
+        case LUA_TNUMBER : 
+            v_number = lua_tonumber(s, idx);
+            if (v_number == (lua_Number)(int64_t) v_number)
+            {
+                // Integer
+                V_SET_INT(ret, v_number);
+            }
+            else
+            {
+                // Double
+                V_SET_DOUBLE(ret, v_number);
+            }
+
+            break;
+        case LUA_TBOOLEAN : 
+            v_boolean = lua_toboolean(s, idx);
+            if (!v_boolean)
+            {
+                V_SET_BOOLEAN(ret, BSP_FALSE);
+            }
+            else
+            {
+                V_SET_BOOLEAN(ret, BSP_TRUE);
+            }
+
+            break;
+        case LUA_TSTRING : 
+            str = lua_tolstring(s, idx, &str_len);
+            v_str = bsp_new_string(str, str_len);
+            V_SET_STRING(ret, v_str);
+            break;
+        case LUA_TUSERDATA : 
+            v_ptr = lua_touserdata(s, idx);
+            V_SET_POINTER(ret, v_ptr);
+            break;
+        case LUA_TTABLE : 
+            v_obj = _lua_table_to_object(s, idx);
+            V_SET_OBJECT(ret, v_obj);
+            break;
+        default : 
+            V_SET_NULL(ret);
+            break;
+    }
+
+    return ret;
+}
+
+static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx)
+{
+    if (!s || !lua_istable(s, idx))
+    {
+        return NULL;
+    }
+
+    idx = lua_absindex(s, idx);
+    BSP_OBJECT *ret = bsp_new_object();
+    BSP_VALUE *val = NULL;
+    if (!ret)
+    {
+        return NULL;
+    }
+
+    // Check type, array or hash
+    size_t total = luaL_len(s, idx);
+    if (total == lua_table_size(s, idx))
+    {
+        // Array
+        ret->type = BSP_OBJECT_ARRAY;
+        size_t i;
+        for (i = 1; i <= total; i ++)
+        {
+            lua_rawgeti(s, idx, i);
+            val = _lua_value_to_value(s, -1);
+            bsp_object_set_array(ret, i - 1, val);
+            lua_pop(s, 1);
+        }
+    }
+    else
+    {
+        // Hash
+        ret->type = BSP_OBJECT_HASH;
+        const char *key_str = NULL;
+        size_t key_len = 0;
+        BSP_STRING *key = NULL;
+        lua_checkstack(s, 2);
+        lua_pushnil(s);
+        while (0 != lua_next(s, idx))
+        {
+            // Key
+            key_str = lua_tolstring(s, -2, &key_len);
+            key = bsp_new_string(key_str, key_len);
+            // Value
+            val = _lua_value_to_value(s, -1);
+            bsp_object_set_hash(ret, key, val);
+            lua_pop(s, 1);
+        }
+    }
+
+    return ret;
+}
+
+BSP_OBJECT * lua_to_object(lua_State *s, int idx)
+{
+    if (!s)
+    {
+        return NULL;
+    }
+
+    BSP_OBJECT *ret = NULL;
+    if (lua_istable(s, idx))
+    {
+        // Array or hash
+        ret = _lua_table_to_object(s, idx);
+    }
+    else
+    {
+        ret = bsp_new_object();
+        ret->type = BSP_OBJECT_SINGLE;
+        bsp_object_set_single(ret, _lua_value_to_value(s, idx));
+    }
+
+    return ret;
 }
 
 // Call lua function
@@ -457,7 +626,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
             {
                 lua_pushnil(scrt->state);
             }
-
+debug_lua_stack(scrt->state);
             nargs = 3;
             break;
         case BSPD_TASK_LOAD : 

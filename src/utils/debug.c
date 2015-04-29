@@ -268,6 +268,25 @@ void debug_hex(const char *data, size_t len)
     return;
 }
 
+void debug_lua_stack(lua_State *s)
+{
+    if (!s)
+    {
+        return;
+    }
+
+    int i;
+    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack %p] ===\033[0m\n", (void *) s);
+    for (i = 1; i <= lua_gettop(s); i ++)
+    {
+        fprintf(stderr, " \033[1;35m%d\033[0m => \033[1;34m%s\033[0m\n", i, lua_typename(s, lua_type(s, i)));
+    }
+
+    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack END] ===\033[0m\n");
+
+    return;
+}
+
 void show_trace(BSP_TRACE *bt)
 {
     struct tm loctime;

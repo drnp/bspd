@@ -123,13 +123,13 @@ static void _worker_on_poke(BSP_THREAD *t)
     return;
 }
 
-static ssize_t _proc_raw(struct bspd_bare_data_t *bared, int fd, const char *hook)
+static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt, const char *hook)
 {
     BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_RAW);
     if (task)
     {
         BSP_STRING *str = bsp_new_string(STR_STR(bared->data), STR_LEN(bared->data));
-        task->clt = fd;
+        task->clt = clt->sck.fd;
         task->ptr = (void *) str;
         task->func = hook;
         push_script_task(task);
@@ -138,10 +138,8 @@ static ssize_t _proc_raw(struct bspd_bare_data_t *bared, int fd, const char *hoo
     return STR_LEN(bared->data);
 }
 
-static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *hook)
+static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt, const char *hook)
 {
-    //debug_hex(STR_STR(bared->data), STR_LEN(bared->data));
-    //fprintf(stderr, "Packet : %s => %d\n", hook, (int) STR_LEN(bared->data));
     // Parse packet
     size_t len = STR_LEN(bared->data);
     ssize_t ret = len;
@@ -149,6 +147,12 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *
     {
         // Not enough data
         return 0;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (!session)
+    {
+        return len;
     }
 
     const char *input = STR_STR(bared->data);
@@ -168,13 +172,35 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *
     {
         // Control packet
         BSPD_CTL_TYPE ctl = (hdr >> 3) & 7;
-        //int ctl_data = hdr & 7;
+        int ctl_data = hdr & 7;
+        /*
         task = new_script_task(BSPD_TASK_CTL);
         if (task)
         {
             task->clt = fd;
             task->cmd = ctl;
             push_script_task(task);
+        }
+        */
+        switch (ctl)
+        {
+            case BSPD_CTL_REP : 
+                break;
+            case BSPD_CTL_HANDSHAKE :
+                break;
+            case BSPD_CTL_HEARTBEAT : 
+                // Send back
+                bsp_socket_append(&clt->sck, input, 1);
+                bsp_socket_flush(&clt->sck);
+                break;
+            case BSPD_CTL_SPEC : 
+                break;
+            case BSPD_CTL_SERIALIZE : 
+                session->serialize_type = (BSPD_SERIALIZE_TYPE) ctl_data;
+                break;
+            case BSPD_CTL_COMPRESS : 
+                session->compress_type = (BSPD_COMPRESS_TYPE) ctl_data;
+                break;
         }
 
         return 1;
@@ -232,7 +258,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *
                 if (task)
                 {
                     data = bsp_new_string(input + 5, plen);
-                    task->clt = fd;
+                    task->clt = clt->sck.fd;
                     task->ptr = (void *) data;
                     task->func = hook;
                     push_script_task(task);
@@ -267,8 +293,9 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *
                         default : 
                             break;
                     }
+
                     bsp_del_string(data);
-                    task->clt = fd;
+                    task->clt = clt->sck.fd;
                     task->ptr = (void *) obj;
                     task->func = hook;
                     push_script_task(task);
@@ -311,8 +338,9 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, int fd, const char *
                         default : 
                             break;
                     }
+
                     bsp_del_string(data);
-                    task->clt = fd;
+                    task->clt = clt->sck.fd;
                     task->cmd = V_GET_INT((&value));
                     task->ptr = (void *) obj;
                     task->func = hook;
@@ -340,6 +368,7 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
     {
+        new_session(clt);
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;
@@ -356,6 +385,9 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
     {
         return BSP_RTN_INVALID;
     }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    del_session(session);
 
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
@@ -377,6 +409,12 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
         return 0;
     }
 
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (session)
+    {
+        session->last_active = time(NULL);
+    }
+
     size_t data_len = 0;
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (!srv)
@@ -386,6 +424,11 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
     }
 
     BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
+    if (!prop)
+    {
+        return len;
+    }
+
     size_t (*barer)(BSPD_BARED *bared, const char *data, size_t len) = NULL;
     switch (prop->type)
     {
@@ -419,11 +462,11 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
             {
                 if (BSPD_DATA_PACKET == prop->data_type)
                 {
-                    proced = _proc_packet(bared, clt->sck.fd, prop->lua_hook_data);
+                    proced = _proc_packet(bared, clt, prop->lua_hook_data);
                 }
                 else
                 {
-                    proced = _proc_raw(bared, clt->sck.fd, prop->lua_hook_data);
+                    proced = _proc_raw(bared, clt, prop->lua_hook_data);
                 }
 
                 if (proced < 0)
@@ -462,12 +505,132 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
     return data_len;
 }
 
+// Send data to client
+static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *data)
+{
+    if (!clt || !data)
+    {
+        return 0;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (!session)
+    {
+        return 0;
+    }
+
+    BSP_SOCKET_SERVER *srv = clt->connected_server;
+    if (!srv)
+    {
+        return 0;
+    }
+
+    BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
+    if (!prop)
+    {
+        return 0;
+    }
+
+    size_t ret = 0;
+    if (BSPD_DATA_PACKET == prop->data_type)
+    {
+        // Stream packet
+/* Compress & crypt
+        switch (session->compress_type)
+        {
+            case BSPD_COMPRESS_DEFLATE : 
+                break;
+            case BSPD_COMPRESS_LZ4 : 
+                break;
+            case BSPD_COMPRESS_SNAPPY : 
+                break;
+            case BSPD_COMPRESS_NONE : 
+            default : 
+                break;
+        }
+*/
+        char len[4];
+        BSP_VALUE tmp;
+        BSP_VALUE *val = &tmp;
+        V_SET_INT32(val, (int32_t) STR_LEN(data));
+        bsp_set_value(len, val, BSP_BIG_ENDIAN);
+        ret = bsp_socket_append(&clt->sck, (const char *) &hdr, sizeof(unsigned char));
+        ret += bsp_socket_append(&clt->sck, (const char *) len, sizeof(int32_t));
+        ret += bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+    }
+    else
+    {
+        // Raw
+        ret = bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+    }
+
+    bsp_socket_flush(&clt->sck);
+
+    return ret;
+}
+
+size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str)
+{
+    if (!clt || !str)
+    {
+        return 0;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (!session)
+    {
+        return 0;
+    }
+
+    BSP_SOCKET_SERVER *srv = clt->connected_server;
+    if (!srv)
+    {
+        return 0;
+    }
+
+    BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
+    if (!prop)
+    {
+        return 0;
+    }
+
+    size_t ret = 0;
+    if (BSPD_DATA_PACKET == prop->data_type)
+    {
+        // Stream packet
+/* Compress & crypt
+        switch (session->compress_type)
+        {
+            case BSPD_COMPRESS_DEFLATE : 
+                break;
+            case BSPD_COMPRESS_LZ4 : 
+                break;
+            case BSPD_COMPRESS_SNAPPY : 
+                break;
+            case BSPD_COMPRESS_NONE : 
+            default : 
+                break;
+        }
+*/
+        unsigned char hdr = BSPD_PACKET_STR << 6 | (session->compress_type) << 1;
+        ret = _real_send(clt, hdr, str);
+    }
+    else
+    {
+        // Raw
+        ret = _real_send(clt, 0, str);
+    }
+
+    return ret;
+}
+
 // Portal
 int bspd_startup()
 {
     if (BSP_RTN_SUCCESS != bsp_init() || 
         BSP_RTN_SUCCESS != script_init() || 
-        BSP_RTN_SUCCESS != bared_init())
+        BSP_RTN_SUCCESS != bared_init() || 
+        BSP_RTN_SUCCESS != clients_init())
     {
         fprintf(stderr, "Application error\n");
         exit(BSP_RTN_ERR_MEMORY);

@@ -1,6 +1,6 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
- * session.c
+ * clients.c
  * Copyright (C) 2015 Dr.NP <conan.np@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,23 +29,38 @@
  */
 
 /**
- * Client session implementation
+ * Client list and channel defination
  *
- * @package bspd::duang
+ * @package bsp::duang
  * @author Dr.NP <np@bsgroup.org>
- * @update 03/27/2015
+ * @update 04/29/2015
  * @changelog
- *      [03/27/2015] - Creation
+ *      [04/29/2015] - Creation
  */
 
 #include "../bspd.h"
 
-// List
+BSP_SOCKET_CLIENT **client_list = NULL;
+size_t client_list_size = 0;
 static BSP_OBJECT *logged = NULL;
 static BSP_MEMPOOL *mp_session = NULL;
+static BSP_MEMPOOL *mp_channel = NULL;
 
-int session_init()
+int clients_init()
 {
+    // FD list
+    if (!client_list)
+    {
+        client_list = bsp_calloc(CLIENT_LIST_INITIAL, sizeof(BSP_SOCKET_CLIENT *));
+        if (!client_list)
+        {
+            return BSP_RTN_ERR_MEMORY;
+        }
+
+        client_list_size = CLIENT_LIST_INITIAL;
+    }
+
+    // Login group
     if (!logged)
     {
         logged = bsp_new_object();
@@ -57,6 +72,7 @@ int session_init()
         logged->type = BSP_OBJECT_HASH;
     }
 
+    // Session pool
     if (!mp_session)
     {
         mp_session = bsp_new_mempool(sizeof(BSPD_SESSION), NULL, NULL);
@@ -66,7 +82,73 @@ int session_init()
         }
     }
 
+    // Channel pool
+    if (!mp_channel)
+    {
+        mp_channel = bsp_new_mempool(sizeof(BSPD_CHANNEL), NULL, NULL);
+        if (!mp_channel)
+        {
+            return BSP_RTN_ERR_MEMORY;
+        }
+    }
+
     return BSP_RTN_SUCCESS;
+}
+
+int reg_client(BSP_SOCKET_CLIENT *clt)
+{
+    if (!clt)
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    int fd = clt->sck.fd;
+    if (fd >= client_list_size)
+    {
+        // Enlarge
+        size_t new_size = 2 << bsp_log2(fd);
+        BSP_SOCKET_CLIENT **new_list = bsp_realloc(client_list, sizeof(BSP_SOCKET_CLIENT *) * new_size);
+        if (!new_list)
+        {
+            return BSP_RTN_ERR_MEMORY;
+        }
+
+        client_list = new_list;
+        client_list_size = new_size;
+    }
+
+    client_list[fd] = clt;
+
+    return BSP_RTN_SUCCESS;
+}
+
+int unreg_client(BSP_SOCKET_CLIENT *clt)
+{
+    if (!clt)
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    int fd = clt->sck.fd;
+    if (fd < client_list_size)
+    {
+        if (clt == client_list[fd])
+        {
+            client_list[fd] = NULL;
+        }
+    }
+
+    return BSP_RTN_SUCCESS;
+}
+
+BSP_SOCKET_CLIENT * check_client(int fd)
+{
+    if (fd < client_list_size)
+    {
+        return client_list[fd];
+    }
+
+    return NULL;
 }
 
 BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt)
@@ -166,4 +248,9 @@ int session_logoff(BSPD_SESSION *session)
     session->logged = BSP_FALSE;
 
     return BSP_RTN_SUCCESS;
+}
+
+BSPD_SESSION * check_session(const char *session_id)
+{
+    return NULL;
 }

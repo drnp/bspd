@@ -87,8 +87,12 @@ typedef enum bspd_control_packet_type_e
 #define BSPD_CTL_HANDSHAKE              BSPD_CTL_HANDSHAKE
     BSPD_CTL_HEARTBEAT  = 2, 
 #define BSPD_CTL_HEARTBEAT              BSPD_CTL_HEARTBEAT
-    BSPD_CTL_SPEC       = 3
+    BSPD_CTL_SPEC       = 3, 
 #define BSPD_CTL_SPEC                   BSPD_CTL_SPEC
+    BSPD_CTL_SERIALIZE  = 4, 
+#define BSPD_CTL_SERIALIZE              BSPD_CTL_SERIALIZE
+    BSPD_CTL_COMPRESS   = 5
+#define BSPD_CTL_COMPRESS               BSPD_CTL_COMPRESS
 } BSPD_CTL_TYPE;
 
 // Serialize type (in header : 3 bits)
@@ -171,7 +175,20 @@ typedef struct bspd_session_t
     uint64_t            session_id_int;
     time_t              connect_time;
     time_t              login_time;
+    time_t              last_active;
+    BSPD_SERIALIZE_TYPE serialize_type;
+    BSPD_COMPRESS_TYPE  compress_type;
+    BSP_SOCKET_CLIENT   *bind;
+    BSP_BOOLEAN         logged;
 } BSPD_SESSION;
+
+// Channel
+typedef struct bspd_channel_t
+{
+    int                 id;
+    BSPD_SESSION        **sessions;
+    size_t              nsessions;
+} BSPD_CHANNEL;
 
 typedef struct bspd_server_prop_t
 {
@@ -277,12 +294,24 @@ BSPD_SCRIPT * new_script_container();
 int del_script_container(BSPD_SCRIPT *scrt);
 int load_script_file(BSPD_SCRIPT *scrt, const char *script_filename);
 int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script);
+inline size_t lua_table_size(lua_State *s, int idx);
 void object_to_lua(lua_State *s, BSP_OBJECT *obj);
-BSP_OBJECT * lua_to_object(lua_State *s);
+BSP_OBJECT * lua_to_object(lua_State *s, int idx);
 int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task);
 BSPD_SCRIPT_TASK * new_script_task(BSPD_SCRIPT_TASK_TYPE type);
 void del_script_task(BSPD_SCRIPT_TASK *task);
 int push_script_task(BSPD_SCRIPT_TASK *task);
 BSPD_SCRIPT_TASK * pop_script_task();
+int clients_init();
+int reg_client(BSP_SOCKET_CLIENT *clt);
+int unreg_client(BSP_SOCKET_CLIENT *clt);
+BSP_SOCKET_CLIENT * check_client(int fd);
+BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt);
+int del_session(BSPD_SESSION *session);
+int session_login(BSPD_SESSION *session);
+int session_logoff(BSPD_SESSION *session);
+BSPD_SESSION * check_session(const char *session_id);
+
+size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str);
 
 #endif  /* _SERVER_H */

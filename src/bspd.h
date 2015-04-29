@@ -46,11 +46,13 @@
 #include "bsp.h"
 
 #define MAX_SESSION_ID_LENGTH           64
+#define CLIENT_LIST_INITIAL             65536
 
 #include "serialization/serialization.h"
 #include "server/server.h"
 #include "protocol/protocol.h"
 #include "utils/utils.h"
+#include "wrapper/wrapper.h"
 
 typedef struct bspd_config_t
 {
