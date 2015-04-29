@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 ## Created by Anjuta
 
-SUBDIRS = deps src po
+SUBDIRS = deps src
 
 dist_doc_DATA = \
 	README \

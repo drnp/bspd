@@ -53,7 +53,7 @@ AC_CACHE_CHECK(
             [lb_linked=yes], 
             [lb_linked=no]
         )
-        if test $lg_linked = no; then
+        if test "$lg_linked" = no; then
             AC_MSG_ERROR([libbsp not found])
         else
             ac_cv_libbsp_ver=`pkg-config --modversion bsp`
