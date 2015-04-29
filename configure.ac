@@ -7,7 +7,7 @@ AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE([disable])
 AC_PREFIX_DEFAULT([/opt/bspd])
 AC_PROG_CC
-AC_PROG_CXX([gcc c++ g++])
+AC_PROG_CXX([gcc c++ g++ cpp])
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_CC_C_O
