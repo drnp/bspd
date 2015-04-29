@@ -27,6 +27,7 @@ LT_INIT
 
 AC_SEARCH_LIBS(gethugepagesizes, hugetlbfs)
 AC_CHECK_LIB(stdc++, main, [], [AC_MSG_ERROR([libstdc++ needed])])
+AC_CHECK_LIB(dl, dlsym, [], [AC_MSG_ERROR([libltdl needed])])
 AC_CHECK_HEADERS([stdint.h stddef.h sys/mman.h sys/resource.h windows.h byteswap.h sys/byteswap.h sys/endian.h sys/time.h])
 
 CPPFLAGS="-I$PWD -I$PWD/deps/hiredis -I$PWD/deps/libmongo-client -I$PWD/deps/lua -I$PWD/deps/lz4 -I$PWD/deps/mariadb-client -I$PWD/deps/snappy -I$PWD/deps/sqlite -I$PWD/deps/zlib"
