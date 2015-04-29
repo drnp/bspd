@@ -75,5 +75,4 @@ deps/mariadb-client/Makefile
 deps/hiredis/Makefile
 deps/lua/Makefile
 src/Makefile
-po/Makefile.in
 ])
