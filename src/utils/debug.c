@@ -85,7 +85,7 @@ static void _dump_value(BSP_VALUE *val, int layer)
             str = V_GET_STRING(val);
             if (str && STR_STR(str))
             {
-                write(STDERR_FILENO, STR_STR(str), STR_LEN(str));
+                (void) write(STDERR_FILENO, STR_STR(str), STR_LEN(str));
             }
             else
             {
@@ -161,7 +161,7 @@ static void _dump_object(BSP_OBJECT *obj, int layer)
                 }
 
                 fprintf(stderr, "\033[1;33m");
-                write(STDERR_FILENO, STR_STR(key), STR_LEN(key));
+                (void) write(STDERR_FILENO, STR_STR(key), STR_LEN(key));
                 fprintf(stderr, "\033[0m => ");
                 _dump_value(val, layer);
                 bsp_object_next(obj);
