@@ -54,6 +54,7 @@ static void _dump_value(BSP_VALUE *val, int layer)
 
     BSP_STRING *str = NULL;
     BSP_OBJECT *sub_obj = NULL;
+    ssize_t ret;
     switch (val->type)
     {
         case BSP_VALUE_NULL : 
@@ -85,7 +86,11 @@ static void _dump_value(BSP_VALUE *val, int layer)
             str = V_GET_STRING(val);
             if (str && STR_STR(str))
             {
-                (void) write(STDERR_FILENO, STR_STR(str), STR_LEN(str));
+                ret = write(STDERR_FILENO, STR_STR(str), STR_LEN(str));
+                if (ret <= 0)
+                {
+                    fprintf(stderr, "\033[1;37m### STRING ###\033[0m");
+                }
             }
             else
             {
@@ -123,6 +128,7 @@ static void _dump_object(BSP_OBJECT *obj, int layer)
     BSP_VALUE *val;
     BSP_STRING *key;
     bsp_object_reset(obj);
+    ssize_t ret;
     switch (obj->type)
     {
         case BSP_OBJECT_SINGLE : 
@@ -161,7 +167,12 @@ static void _dump_object(BSP_OBJECT *obj, int layer)
                 }
 
                 fprintf(stderr, "\033[1;33m");
-                (void) write(STDERR_FILENO, STR_STR(key), STR_LEN(key));
+                ret = write(STDERR_FILENO, STR_STR(key), STR_LEN(key));
+                if (ret <= 0)
+                {
+                    fprintf(stderr, "KEY");
+                }
+
                 fprintf(stderr, "\033[0m => ");
                 _dump_value(val, layer);
                 bsp_object_next(obj);
