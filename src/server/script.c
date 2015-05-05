@@ -345,6 +345,7 @@ static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj)
 
                 lua_settable(s, -3);
             }
+
             break;
         case BSP_OBJECT_HASH : 
             // Hash
@@ -369,6 +370,7 @@ static void _push_object_to_lua(lua_State *s, BSP_OBJECT *obj)
         default : 
             break;
     }
+
     bsp_spin_unlock(&obj->lock);
 
     return;
@@ -626,7 +628,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
             {
                 lua_pushnil(scrt->state);
             }
-debug_lua_stack(scrt->state);
+
             nargs = 3;
             break;
         case BSPD_TASK_LOAD : 

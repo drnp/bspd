@@ -313,5 +313,7 @@ int session_logoff(BSPD_SESSION *session);
 BSPD_SESSION * check_session(const char *session_id);
 
 size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str);
+size_t send_object(BSP_SOCKET_CLIENT *clt, BSP_OBJECT *object);
+size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params);
 
 #endif  /* _SERVER_H */

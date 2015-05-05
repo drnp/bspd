@@ -173,15 +173,6 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
         // Control packet
         BSPD_CTL_TYPE ctl = (hdr >> 3) & 7;
         int ctl_data = hdr & 7;
-        /*
-        task = new_script_task(BSPD_TASK_CTL);
-        if (task)
-        {
-            task->clt = fd;
-            task->cmd = ctl;
-            push_script_task(task);
-        }
-        */
         switch (ctl)
         {
             case BSPD_CTL_REP : 
@@ -209,8 +200,8 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
     {
         // Data
         BSPD_SERIALIZE_TYPE s_type = (hdr >> 3) & 7;
-        //BSPD_COMPRESS_TYPE c_type = (hdr >> 1) & 3;
-        //BSP_BOOLEAN encrypted = hdr & 1;
+        BSPD_COMPRESS_TYPE c_type = (hdr >> 1) & 3;
+        BSP_BOOLEAN encrypted = hdr & 1;
 
         size_t remaining = len - 1;
         if (remaining < 4)
@@ -232,7 +223,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
 
         BSP_STRING *data = NULL;
         BSP_OBJECT *obj = NULL;
-/* No encrypt & compress now
+
         if (encrypted)
         {
             // Decrypt
@@ -250,7 +241,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
             default : 
                 break;
         }
-*/
+
         switch (p_type)
         {
             case BSPD_PACKET_STR : 
@@ -376,6 +367,8 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
         push_script_task(task);
     }
 
+    reg_client(clt);
+
     return BSP_RTN_SUCCESS;
 }
 
@@ -398,6 +391,8 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
         task->func = prop->lua_hook_disconnect;
         push_script_task(task);
     }
+
+    unreg_client(clt);
 
     return BSP_RTN_SUCCESS;
 }
@@ -549,13 +544,15 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
                 break;
         }
 */
-        char len[4];
-        BSP_VALUE tmp;
-        BSP_VALUE *val = &tmp;
-        V_SET_INT32(val, (int32_t) STR_LEN(data));
-        bsp_set_value(len, val, BSP_BIG_ENDIAN);
+        int len = (int) STR_LEN(data);
+        char len_str[4] = {
+                            (char) ((len >> 24) & 255), 
+                            (char) ((len >> 16) & 255), 
+                            (char) ((len >> 8) & 255), 
+                            (char) (len & 255)
+        };
         ret = bsp_socket_append(&clt->sck, (const char *) &hdr, sizeof(unsigned char));
-        ret += bsp_socket_append(&clt->sck, (const char *) len, sizeof(int32_t));
+        ret += bsp_socket_append(&clt->sck, (const char *) len_str, 4);
         ret += bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
     }
     else
@@ -569,9 +566,9 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
     return ret;
 }
 
-size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str)
+size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *string)
 {
-    if (!clt || !str)
+    if (!clt || !string)
     {
         return 0;
     }
@@ -613,13 +610,170 @@ size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str)
         }
 */
         unsigned char hdr = BSPD_PACKET_STR << 6 | (session->compress_type) << 1;
-        ret = _real_send(clt, hdr, str);
+        ret = _real_send(clt, hdr, string);
     }
     else
     {
         // Raw
-        ret = _real_send(clt, 0, str);
+        ret = _real_send(clt, 0, string);
     }
+
+    return ret;
+}
+
+size_t send_object(BSP_SOCKET_CLIENT *clt, BSP_OBJECT *object)
+{
+    if (!clt || !object)
+    {
+        return 0;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (!session)
+    {
+        return 0;
+    }
+
+    BSP_SOCKET_SERVER *srv = clt->connected_server;
+    if (!srv)
+    {
+        return 0;
+    }
+
+    BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
+    if (!prop)
+    {
+        return 0;
+    }
+
+    if (BSPD_DATA_PACKET != prop->data_type)
+    {
+        return 0;
+    }
+
+    size_t ret = 0;
+    BSP_STRING *data = NULL;
+    switch (session->serialize_type)
+    {
+        case BSPD_SERIALIZE_JSON : 
+            data = json_nd_encode(object, data);
+            break;
+        case BSPD_SERIALIZE_MSGPACK : 
+            break;
+        case BSPD_SERIALIZE_AMF3 : 
+            break;
+        case BSPD_SERIALIZE_PROTOBUF : 
+            break;
+        case BSPD_SERIALIZE_THRIFT : 
+            break;
+        case BSPD_SERIALIZE_AVRO : 
+            break;
+        case BSPD_SERIALIZE_HESSIAN2 : 
+            break;
+        case BSPD_SERIALIZE_NATIVE : 
+        default : 
+            break;
+    }
+
+/*
+    switch (session->compress_type)
+    {
+        case BSPD_COMPRESS_DEFLATE : 
+            break;
+        case BSPD_COMPRESS_LZ4 : 
+            break;
+        case BSPD_COMPRESS_SNAPPY : 
+            break;
+        case BSPD_COMPRESS_NONE : 
+        default : 
+            break;
+    }
+*/
+    unsigned char hdr = BSPD_PACKET_OBJ << 6 | (session->compress_type) << 1;
+    ret = _real_send(clt, hdr, data);
+    bsp_del_string(data);
+
+    return ret;
+}
+
+size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
+{
+    if (!clt || !params)
+    {
+        return 0;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (!session)
+    {
+        return 0;
+    }
+
+    BSP_SOCKET_SERVER *srv = clt->connected_server;
+    if (!srv)
+    {
+        return 0;
+    }
+
+    BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
+    if (!prop)
+    {
+        return 0;
+    }
+
+    if (BSPD_DATA_PACKET != prop->data_type)
+    {
+        return 0;
+    }
+
+    size_t ret = 0;
+    char cmd_str[4] = {
+                        (char) ((command >> 24) & 255), 
+                        (char) ((command >> 16) & 255), 
+                        (char) ((command >> 8) & 255), 
+                        (char) (command & 255)
+    };
+
+    BSP_STRING *data = bsp_new_string(cmd_str, 4);
+    switch (session->serialize_type)
+    {
+        case BSPD_SERIALIZE_JSON : 
+            data = json_nd_encode(params, data);
+            break;
+        case BSPD_SERIALIZE_MSGPACK : 
+            break;
+        case BSPD_SERIALIZE_AMF3 : 
+            break;
+        case BSPD_SERIALIZE_PROTOBUF : 
+            break;
+        case BSPD_SERIALIZE_THRIFT : 
+            break;
+        case BSPD_SERIALIZE_AVRO : 
+            break;
+        case BSPD_SERIALIZE_HESSIAN2 : 
+            break;
+        case BSPD_SERIALIZE_NATIVE : 
+        default : 
+            break;
+    }
+
+/*
+    switch (session->compress_type)
+    {
+        case BSPD_COMPRESS_DEFLATE : 
+            break;
+        case BSPD_COMPRESS_LZ4 : 
+            break;
+        case BSPD_COMPRESS_SNAPPY : 
+            break;
+        case BSPD_COMPRESS_NONE : 
+        default : 
+            break;
+    }
+*/
+    unsigned char hdr = BSPD_PACKET_CMD << 6 | (session->compress_type) << 1;
+    ret = _real_send(clt, hdr, data);
+    bsp_del_string(data);
 
     return ret;
 }
@@ -745,6 +899,7 @@ int bspd_startup()
         if (scrt)
         {
             t->additional = (void *) scrt;
+            LOAD_WRAPPERS(scrt->state)
             load_script_file(scrt, c->script);
         }
     }

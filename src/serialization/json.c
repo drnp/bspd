@@ -93,7 +93,7 @@ static void _append_string_to_json(BSP_STRING *json, BSP_STRING *str)
             // Append normal data
             if (normal_start >= 0 && normal_end > normal_start) 
             {
-                bsp_string_append(json, data + normal_start, (normal_end - normal_start));
+                bsp_string_append(json, data + normal_start, (normal_end - normal_start + 1));
                 normal_start = -1;
                 normal_end = -1;
             }
@@ -107,58 +107,60 @@ static void _append_value_to_json(BSP_STRING *json, BSP_VALUE *val)
 {
     if (!json)
     {
-        if (!val)
-        {
+        return;
+    }
+
+    if (!val)
+    {
+        bsp_string_append(json, "null", 4);
+        return;
+    }
+
+    switch (val->type)
+    {
+        case BSP_VALUE_NULL : 
             bsp_string_append(json, "null", 4);
-            return;
-        }
+            break;
+        case BSP_VALUE_UINT8 : 
+        case BSP_VALUE_UINT16 : 
+        case BSP_VALUE_UINT32 : 
+        case BSP_VALUE_UINT64 : 
+            bsp_string_printf(json, "%llu", (long long unsigned int) (V_GET_INT(val)));
+            break;
+        case BSP_VALUE_INT8 : 
+        case BSP_VALUE_INT16 : 
+        case BSP_VALUE_INT32 : 
+        case BSP_VALUE_INT64 : 
+        case BSP_VALUE_INT29 : 
+        case BSP_VALUE_INT : 
+            bsp_string_printf(json, "%lld", (long long int) (V_GET_INT(val)));
+            break;
+        case BSP_VALUE_FLOAT : 
+        case BSP_VALUE_DOUBLE : 
+            bsp_string_printf(json, "%.14g", V_GET_FLOAT(val));
+            break;
+        case BSP_VALUE_BOOLEAN : 
+            if (BSP_TRUE == V_GET_BOOLEAN(val))
+            {
+                bsp_string_append(json, "true", 4);
+            }
+            else
+            {
+                bsp_string_append(json, "false", 5);
+            }
 
-        switch (val->type)
-        {
-            case BSP_VALUE_NULL : 
-                bsp_string_append(json, "null", 4);
-                break;
-            case BSP_VALUE_UINT8 : 
-            case BSP_VALUE_UINT16 : 
-            case BSP_VALUE_UINT32 : 
-            case BSP_VALUE_UINT64 : 
-                bsp_string_printf(json, "%llu", (long long unsigned int) V_GET_INT(val));
-                break;
-            case BSP_VALUE_INT8 : 
-            case BSP_VALUE_INT16 : 
-            case BSP_VALUE_INT32 : 
-            case BSP_VALUE_INT64 : 
-            case BSP_VALUE_INT29 : 
-            case BSP_VALUE_INT : 
-                bsp_string_printf(json, "%lld", (long long int) V_GET_INT(val));
-                break;
-            case BSP_VALUE_FLOAT : 
-            case BSP_VALUE_DOUBLE : 
-                bsp_string_printf(json, "%.14g", V_GET_FLOAT(val));
-                break;
-            case BSP_VALUE_BOOLEAN : 
-                if (BSP_TRUE == V_GET_BOOLEAN(val))
-                {
-                    bsp_string_append(json, "true", 4);
-                }
-                else
-                {
-                    bsp_string_append(json, "false", 5);
-                }
-
-                break;
-            case BSP_VALUE_STRING : 
-                bsp_string_append(json, "\"", 1);
-                _append_string_to_json(json, V_GET_STRING(val));
-                bsp_string_append(json, "\"", 1);
-                break;
-            case BSP_VALUE_OBJECT : 
-                _append_object_to_json(json, V_GET_OBJECT(val));
-                break;
-            default : 
-                // Nothing to append
-                break;
-        }
+            break;
+        case BSP_VALUE_STRING : 
+            bsp_string_append(json, "\"", 1);
+            _append_string_to_json(json, V_GET_STRING(val));
+            bsp_string_append(json, "\"", 1);
+            break;
+        case BSP_VALUE_OBJECT : 
+            _append_object_to_json(json, V_GET_OBJECT(val));
+            break;
+        default : 
+            // Nothing to append
+            break;
     }
 
     return;
@@ -228,12 +230,15 @@ static void _append_object_to_json(BSP_STRING *json, BSP_OBJECT *obj)
     return;
 }
 
-BSP_STRING * json_nd_encode(BSP_OBJECT *obj)
+BSP_STRING * json_nd_encode(BSP_OBJECT *obj, BSP_STRING *json)
 {
-    BSP_STRING *json = NULL;
     if (obj)
     {
-        json = bsp_new_string(NULL, 0);
+        if (!json)
+        {
+            json = bsp_new_string(NULL, 0);
+        }
+
         _append_object_to_json(json, obj);
     }
 

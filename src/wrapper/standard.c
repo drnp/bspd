@@ -57,9 +57,9 @@ static int standard_net_send(lua_State *s)
     const char *session_id = NULL;
     BSP_SOCKET_CLIENT *clt = NULL;
     BSPD_SESSION *session = NULL;
-    BSP_STRING *stream = NULL;
     BSP_OBJECT *object = NULL;
     size_t sent = 0;
+
     if (lua_isnumber(s, 1))
     {
         // Send to fd
@@ -91,11 +91,17 @@ static int standard_net_send(lua_State *s)
         // Command
         int cmd = lua_tointeger(s, 2);
         object = lua_to_object(s, 3);
+        sent = send_command(clt, cmd, object);
+        bsp_del_object(object);
+        lua_pushinteger(s, (int) sent);
     }
     else if (lua_istable(s, 2))
     {
         // Object
         object = lua_to_object(s, 2);
+        sent = send_object(clt, object);
+        bsp_del_object(object);
+        lua_pushinteger(s, (int) sent);
     }
     else if (lua_isstring(s, 2))
     {

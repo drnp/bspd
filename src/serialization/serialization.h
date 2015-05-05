@@ -43,7 +43,7 @@
 #define _SERIALIZATION_H
 
 // Json encode & decode
-BSP_STRING * json_nd_encode(BSP_OBJECT *obj);
+BSP_STRING * json_nd_encode(BSP_OBJECT *obj, BSP_STRING *json);
 BSP_OBJECT * json_nd_decode(BSP_STRING *json);
 
 #endif  /* _SERIALIZATION_H */

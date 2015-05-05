@@ -42,4 +42,9 @@
 
 #define _WRAPPER_H
 
+int module_standard(lua_State *s);
+
+#define LOAD_WRAPPERS(s) \
+    module_standard(s);
+
 #endif  /* _WRAPPER_H */
