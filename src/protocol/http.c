@@ -45,7 +45,7 @@ size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len)
     return len;
 }
 
-size_t http_pack_data(const char *data, size_t len)
+size_t http_pack_data(BSPD_BARED *packed, const char *data, size_t len)
 {
     return 0;
 }

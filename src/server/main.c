@@ -526,6 +526,23 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
         return 0;
     }
 
+    size_t (*packer)(BSPD_BARED *packed, const char *data, size_t len) = NULL;
+    switch (prop->type)
+    {
+        case BSPD_SERVER_INTERNAL : 
+            break;
+        case BSPD_SERVER_NORMAL : 
+            break;
+        case BSPD_SERVER_HTTP : 
+            packer = http_pack_data;
+            break;
+        case BSPD_SERVER_WEBSOCKET : 
+            packer = websocket_pack_data;
+            break;
+        default : 
+            break;
+    }
+
     size_t ret = 0;
     if (BSPD_DATA_PACKET == prop->data_type)
     {
@@ -551,14 +568,61 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
                             (char) ((len >> 8) & 255), 
                             (char) (len & 255)
         };
-        ret = bsp_socket_append(&clt->sck, (const char *) &hdr, sizeof(unsigned char));
-        ret += bsp_socket_append(&clt->sck, (const char *) len_str, 4);
-        ret += bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+
+        if (!packer)
+        {
+            ret = bsp_socket_append(&clt->sck, (const char *) &hdr, sizeof(unsigned char));
+            ret += bsp_socket_append(&clt->sck, (const char *) len_str, 4);
+            ret += bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+        }
+        else
+        {
+            BSP_STRING *src = bsp_new_string(NULL, 1);
+            if (src)
+            {
+                BSPD_BARED *packed = bsp_mempool_alloc(mp_bared);
+                if (packed)
+                {
+                    bsp_string_append(src, (const char *) &hdr, sizeof(unsigned char));
+                    bsp_string_append(src, (const char *) len_str, 4);
+                    bsp_string_append(src, STR_STR(data), STR_LEN(data));
+
+                    packer(packed, STR_STR(src), STR_LEN(src));
+                    if (packed->data)
+                    {
+                        ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
+                        bsp_del_string(packed->data);
+                    }
+
+                    bsp_mempool_free(mp_bared, packed);
+                }
+
+                bsp_del_string(src);
+            }
+        }
     }
     else
     {
         // Raw
-        ret = bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+        if (!packer)
+        {
+            ret = bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
+        }
+        else
+        {
+            BSPD_BARED *packed = bsp_mempool_alloc(mp_bared);
+            if (packed)
+            {
+                packer(packed, STR_STR(data), STR_LEN(data));
+                if (packed->data)
+                {
+                    ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
+                    bsp_del_string(packed->data);
+                }
+
+                bsp_mempool_free(mp_bared, packed);
+            }
+        }
     }
 
     bsp_socket_flush(&clt->sck);
@@ -739,6 +803,7 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
     {
         case BSPD_SERIALIZE_JSON : 
             data = json_nd_encode(params, data);
+            debug_hex(STR_STR(data), STR_LEN(data));
             break;
         case BSPD_SERIALIZE_MSGPACK : 
             break;

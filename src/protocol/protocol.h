@@ -48,19 +48,19 @@ typedef struct bspd_http_request_t
 
 // Internal server
 size_t internal_bare_data(BSPD_BARED *bared, const char *data, size_t len);
-size_t internal_pack_data(const char *data, size_t len);
+size_t internal_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 
 // Normal server
 size_t normal_bare_data(BSPD_BARED *bared, const char *data, size_t len);
-size_t normal_pack_data(const char *data, size_t len);
+size_t normal_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 void normal_on_event(BSPD_SERVER_EVENT ev, BSP_OBJECT *protp, void *data);
 
 // Http server
 size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len);
-size_t http_pack_data(const char *data, size_t len);
+size_t http_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 
 // Websocket server
 size_t websocket_bare_data(BSPD_BARED *bared, const char *data, size_t len);
-size_t websocket_pack_data(const char *data, size_t len);
+size_t websocket_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 
 #endif  /* _PROTOCOL_H */

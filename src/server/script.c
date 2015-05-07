@@ -479,6 +479,9 @@ static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx)
         return NULL;
     }
 
+        bsp_spin_lock(&ret->lock);
+        fprintf(stderr, "Try lock\n");
+        bsp_spin_unlock(&ret->lock);
     // Check type, array or hash
     size_t total = luaL_len(s, idx);
     if (total == lua_table_size(s, idx))
@@ -581,6 +584,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     int nargs = 0;
     BSP_STRING *str = NULL;
     BSP_OBJECT *obj = NULL;
+
     switch (task->type)
     {
         case BSPD_TASK_CTL : 
@@ -764,6 +768,7 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
 
     // Tell worker
     bsp_poke_event_container(t->event_container);
+    fprintf(stderr, "Thread call %d\n", t->id);
     bsp_spin_unlock(&task_queue_lock);
 
     return BSP_RTN_SUCCESS;
