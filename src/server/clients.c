@@ -151,8 +151,13 @@ BSP_SOCKET_CLIENT * check_client(int fd)
     return NULL;
 }
 
-BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt)
+BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt, const char *session_id)
 {
+    if (!session_id)
+    {
+        return NULL;
+    }
+
     BSPD_SESSION *ret = bsp_mempool_alloc(mp_session);
     if (ret)
     {
@@ -161,6 +166,7 @@ BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt)
         ret->serialize_type = BSPD_SERIALIZE_NATIVE;
         ret->compress_type = BSPD_COMPRESS_NONE;
         ret->logged = BSP_FALSE;
+        strncpy(ret->session_id, session_id, MAX_SESSION_ID_LENGTH - 1);
         if (clt)
         {
             ret->bind = clt;
@@ -241,6 +247,12 @@ int session_logoff(BSPD_SESSION *session)
     {
         // No id
         return BSP_RTN_ERR_GENERAL;
+    }
+
+    BSP_SOCKET_CLIENT *clt = session->bind;
+    if (clt)
+    {
+        clt->additional = NULL;
     }
 
     BSP_STRING *key = bsp_new_const_string(session->session_id, -1);

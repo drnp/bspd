@@ -120,6 +120,32 @@ int del_script_container(BSPD_SCRIPT *scrt)
     return BSP_RTN_SUCCESS;
 }
 
+// Reload script state
+int restart_script_container(BSPD_SCRIPT *scrt)
+{
+    if (!scrt)
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    if (scrt->state)
+    {
+        lua_close(scrt->state);
+    }
+
+    scrt->state = lua_newstate(_default_allocator, NULL);
+    if (!scrt->state)
+    {
+        bsp_trace_message(BSP_TRACE_ERROR, "lua", "Create lua state failed");
+
+        return BSP_RTN_ERR_GENERAL;
+    }
+
+    luaL_openlibs(scrt->state);
+
+    return BSP_RTN_SUCCESS;
+}
+
 // Load script from file
 int load_script_file(BSPD_SCRIPT *scrt, const char *script_filename)
 {
@@ -479,9 +505,6 @@ static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx)
         return NULL;
     }
 
-        bsp_spin_lock(&ret->lock);
-        fprintf(stderr, "Try lock\n");
-        bsp_spin_unlock(&ret->lock);
     // Check type, array or hash
     size_t total = luaL_len(s, idx);
     if (total == lua_table_size(s, idx))
@@ -768,7 +791,6 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
 
     // Tell worker
     bsp_poke_event_container(t->event_container);
-    fprintf(stderr, "Thread call %d\n", t->id);
     bsp_spin_unlock(&task_queue_lock);
 
     return BSP_RTN_SUCCESS;

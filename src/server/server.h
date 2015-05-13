@@ -292,6 +292,7 @@ BSP_OBJECT * get_conf_from_file(const char *file);
 int parse_conf(BSP_OBJECT *conf);
 BSPD_SCRIPT * new_script_container();
 int del_script_container(BSPD_SCRIPT *scrt);
+int restart_script_container(BSPD_SCRIPT *scrt);
 int load_script_file(BSPD_SCRIPT *scrt, const char *script_filename);
 int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script);
 inline size_t lua_table_size(lua_State *s, int idx);

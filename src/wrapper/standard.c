@@ -41,6 +41,43 @@
 #include "../bspd.h"
 
 /* Network */
+static int standard_net_close(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    int client_fd = 0;
+    const char *session_id = NULL;
+    BSP_SOCKET_CLIENT *clt = NULL;
+    BSPD_SESSION *session = NULL;
+
+    if (lua_isnumber(s, -1))
+    {
+        // Close fd
+        client_fd = lua_tointeger(s, -1);
+        clt = check_client(client_fd);
+    }
+    else if (lua_isstring(s, -1));
+    {
+        // Close session
+        session_id = lua_tostring(s, -1);
+        session = check_session(session_id);
+        if (session)
+        {
+            clt = session->bind;
+        }
+    }
+
+    if (clt)
+    {
+        bsp_socket_close(&clt->sck);
+    }
+
+    return 0;
+}
+
 static int standard_net_send(lua_State *s)
 {
     if (!s)
@@ -128,6 +165,52 @@ static int standard_net_send_channel(lua_State *s)
     return 1;
 }
 
+static int standard_reg_session(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    if (!lua_isstring(s, -1) || !lua_isnumber(s, -2))
+    {
+        lua_pushboolean(s, BSP_FALSE);
+
+        return 1;
+    }
+
+    const char *session_id = lua_tostring(s, -1);
+    int client_fd = lua_tointeger(s, -2);
+    BSP_SOCKET_CLIENT *clt = check_client(client_fd);
+    if (!clt)
+    {
+        // Client not exists
+        lua_pushboolean(s, BSP_FALSE);
+
+        return 1;
+    }
+
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (session)
+    {
+        session_logoff(session);
+    }
+
+    session = new_session(clt);
+
+    return 1;
+}
+
+static int standard_unreg_session(lua_State *s)
+{
+    return 0;
+}
+
 /* Module */
 int module_standard(lua_State *s)
 {
@@ -136,11 +219,20 @@ int module_standard(lua_State *s)
         return 0;
     }
 
+    lua_pushcfunction(s, standard_net_close);
+    lua_setglobal(s, "bsp_net_close");
+
     lua_pushcfunction(s, standard_net_send);
     lua_setglobal(s, "bsp_net_send");
 
     lua_pushcfunction(s, standard_net_send_channel);
     lua_setglobal(s, "bsp_net_send_channel");
+
+    lua_pushcfunction(s, standard_reg_session);
+    lua_setglobal(s, "bsp_reg_session");
+
+    lua_pushcfunction(s, standard_unreg_session);
+    lua_setglobal(s, "bsp_unreg_session");
 
     return 0;
 }

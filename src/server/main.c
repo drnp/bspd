@@ -843,6 +843,71 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
     return ret;
 }
 
+/* Signals */
+// USR1 : Reload LUA script (Append chunk)
+static void _callback_reload_script()
+{
+    BSPD_CONFIG *c = get_global_config();
+    if (!c)
+    {
+        fprintf(stderr, "Panic : application error!\n");
+
+        exit(BSP_RTN_FATAL);
+    }
+
+    bsp_trace_message(BSP_TRACE_NOTICE, "bspd", "Try to reload logic script");
+    int i;
+    BSP_THREAD *t;
+    BSPD_SCRIPT *scrt;
+    for (i = 0; i < c->opt.worker_threads; i ++)
+    {
+        t = bsp_get_thread(BSP_THREAD_WORKER, i);
+        scrt = (BSPD_SCRIPT *) t->additional;
+        if (scrt)
+        {
+            load_script_file(scrt, c->script);
+        }
+    }
+
+    return;
+}
+
+// USR2 : Reload LUA state (Clear all state and rebuild)
+static void _callback_reload_state()
+{
+    BSPD_CONFIG *c = get_global_config();
+    if (!c)
+    {
+        fprintf(stderr, "Panic : application error!\n");
+
+        exit(BSP_RTN_FATAL);
+    }
+
+    bsp_trace_message(BSP_TRACE_NOTICE, "bspd", "Try to restart script state");
+    int i;
+    BSP_THREAD *t;
+    BSPD_SCRIPT *scrt;
+    for (i = 0; i < c->opt.worker_threads; i ++)
+    {
+        t = bsp_get_thread(BSP_THREAD_WORKER, i);
+        scrt = (BSPD_SCRIPT *) t->additional;
+        if (scrt)
+        {
+            restart_script_container(scrt);
+            LOAD_WRAPPERS(scrt->state)
+            load_script_file(scrt, c->script);
+        }
+    }
+
+    return;
+}
+
+// TSTP : Reload configuration
+static void _callback_reload_conf()
+{
+    return;
+}
+
 // Portal
 int bspd_startup()
 {
@@ -852,16 +917,28 @@ int bspd_startup()
         BSP_RTN_SUCCESS != clients_init())
     {
         fprintf(stderr, "Application error\n");
+
         exit(BSP_RTN_ERR_MEMORY);
     }
 
     // Set current working directory to $prefix
     _set_dir(BSPD_PREFIX_DIR);
     BSPD_CONFIG *c = get_global_config();
+    if (!c)
+    {
+        fprintf(stderr, "Panic : application error!\n");
+
+        exit(BSP_RTN_FATAL);
+    }
+
     c->opt.mode = BSP_BOOTSTRAP_SERVER;
     c->opt.trace_level = I_ERR;
     c->opt.trace_recipient = show_trace;
     c->opt.worker_hook_notify = _worker_on_poke;
+
+    c->opt.signal_on_usr1 = _callback_reload_script;
+    c->opt.signal_on_usr2 = _callback_reload_state;
+    c->opt.signal_on_tstp = _callback_reload_conf;
 
     // Load config
     BSP_OBJECT *conf = get_conf_from_file(c->config_file);
