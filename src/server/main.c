@@ -359,7 +359,6 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
     {
-        new_session(clt);
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;

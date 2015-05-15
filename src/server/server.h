@@ -182,12 +182,24 @@ typedef struct bspd_session_t
     BSP_BOOLEAN         logged;
 } BSPD_SESSION;
 
+// Channel type
+typedef enum bspd_channel_type_e
+{
+    BSPD_CHANNEL_ALL    = 0, 
+#define BSPD_CHANNEL_ALL                BSPD_CHANNEL_ALL
+    BSPD_CHANNEL_STATIC = 1, 
+#define BSPD_CHANNEL_STATIC             BSPD_CHANNEL_STATIC
+    BSPD_CHANNEL_DYNAMIC
+                        = 2, 
+#define BSPD_CHANNEL_DYNAMIC            BSPD_CHANNEL_DYNAMIC
+} BSPD_CHANNEL_TYPE;
+
 // Channel
 typedef struct bspd_channel_t
 {
     int                 id;
-    BSPD_SESSION        **sessions;
-    size_t              nsessions;
+    BSPD_CHANNEL_TYPE   type;
+    BSP_OBJECT          *list;
 } BSPD_CHANNEL;
 
 typedef struct bspd_server_prop_t
@@ -303,16 +315,26 @@ BSPD_SCRIPT_TASK * new_script_task(BSPD_SCRIPT_TASK_TYPE type);
 void del_script_task(BSPD_SCRIPT_TASK *task);
 int push_script_task(BSPD_SCRIPT_TASK *task);
 BSPD_SCRIPT_TASK * pop_script_task();
+
+/* Client */
 int clients_init();
 int reg_client(BSP_SOCKET_CLIENT *clt);
 int unreg_client(BSP_SOCKET_CLIENT *clt);
 BSP_SOCKET_CLIENT * check_client(int fd);
-BSPD_SESSION * new_session(BSP_SOCKET_CLIENT *clt);
-int del_session(BSPD_SESSION *session);
-int session_login(BSPD_SESSION *session);
-int session_logoff(BSPD_SESSION *session);
-BSPD_SESSION * check_session(const char *session_id);
 
+BSPD_SESSION * new_session(const char *session_id);
+int del_session(BSPD_SESSION *session);
+BSPD_SESSION * check_session(const char *session_id);
+int bind_session(BSP_SOCKET_CLIENT *clt, BSPD_SESSION *session);
+int logon_session(BSPD_SESSION *session);
+int logoff_session(BSPD_SESSION *session);
+
+BSPD_CHANNEL * new_channel(BSPD_CHANNEL_TYPE type);
+int del_channel(BSPD_CHANNEL *channel);
+int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
+int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
+
+/* Send actions */
 size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str);
 size_t send_object(BSP_SOCKET_CLIENT *clt, BSP_OBJECT *object);
 size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params);

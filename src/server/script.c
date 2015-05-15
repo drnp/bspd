@@ -684,6 +684,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     {
         case LUA_OK : 
             // Successed
+            bsp_trace_message(BSP_TRACE_DEBUG, "lua", "Call chunk successfully");
             break;
         case LUA_YIELD : 
             // Yield
@@ -792,6 +793,7 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
     // Tell worker
     bsp_poke_event_container(t->event_container);
     bsp_spin_unlock(&task_queue_lock);
+    bsp_trace_message(BSP_TRACE_DEBUG, "lua", "Push task %p to queue", task);
 
     return BSP_RTN_SUCCESS;
 }
@@ -813,6 +815,7 @@ BSPD_SCRIPT_TASK * pop_script_task()
     }
 
     bsp_spin_unlock(&task_queue_lock);
+    bsp_trace_message(BSP_TRACE_DEBUG, "lua", "Pop task %p from queue", task);
 
     return task;
 }
