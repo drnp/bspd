@@ -181,18 +181,17 @@ static int standard_net_send_channel(lua_State *s)
 
     int channel_id = lua_tointeger(s, 1);
     BSPD_CHANNEL *channel = check_channel(channel_id);
-    if (!channel)
+    if (!channel || !channel->list)
     {
         lua_pushnil(s);
 
         return 1;
     }
 
-    int client_fd = 0;
-    const char *session_id = NULL;
     BSP_SOCKET_CLIENT *clt = NULL;
     BSPD_SESSION *session = NULL;
     BSP_OBJECT *object = NULL;
+    BSP_VALUE *val = NULL;
     size_t sent = 0;
 
     // Check params
@@ -201,7 +200,22 @@ static int standard_net_send_channel(lua_State *s)
         // Command
         int cmd = lua_tointeger(s, 2);
         object = lua_to_object(s, 3);
-        //sent = send_command(clt, cmd, object);
+        bsp_object_reset(channel->list);
+        val = bsp_object_curr(channel->list, NULL);
+        while (val)
+        {
+            session = (BSPD_SESSION *) (V_GET_POINTER(val));
+            if (session && session->bind)
+            {
+                clt = (BSP_SOCKET_CLIENT *) session->bind;
+                send_command(clt, cmd, object);
+                sent ++;
+            }
+
+            bsp_object_next(channel->list);
+            val = bsp_object_curr(channel->list, NULL);
+        }
+
         bsp_del_object(object);
         lua_pushinteger(s, (int) sent);
     }
@@ -209,7 +223,22 @@ static int standard_net_send_channel(lua_State *s)
     {
         // Object
         object = lua_to_object(s, 2);
-        //sent = send_object(clt, object);
+        bsp_object_reset(channel->list);
+        val = bsp_object_curr(channel->list, NULL);
+        while (val)
+        {
+            session = (BSPD_SESSION *) (V_GET_POINTER(val));
+            if (session && session->bind)
+            {
+                clt = (BSP_SOCKET_CLIENT *) session->bind;
+                send_object(clt, object);
+                sent ++;
+            }
+
+            bsp_object_next(channel->list);
+            val = bsp_object_curr(channel->list, NULL);
+        }
+
         bsp_del_object(object);
         lua_pushinteger(s, (int) sent);
     }
@@ -219,7 +248,22 @@ static int standard_net_send_channel(lua_State *s)
         size_t str_len = 0;
         const char *str = lua_tolstring(s, 2, &str_len);
         BSP_STRING *data = bsp_new_const_string(str, str_len);
-        //sent = send_string(clt, data);
+        bsp_object_reset(channel->list);
+        val = bsp_object_curr(channel->list, NULL);
+        while (val)
+        {
+            session = (BSPD_SESSION *) (V_GET_POINTER(val));
+            if (session && session->bind)
+            {
+                clt = (BSP_SOCKET_CLIENT *) session->bind;
+                send_string(clt, data);
+                sent ++;
+            }
+
+            bsp_object_next(channel->list);
+            val = bsp_object_curr(channel->list, NULL);
+        }
+
         bsp_del_string(data);
         lua_pushinteger(s, (int) sent);
     }
@@ -308,12 +352,127 @@ static int standard_unreg_session(lua_State *s)
     return 0;
 }
 
+static int standard_new_channel(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    int channel_id = new_channel(BSPD_CHANNEL_DYNAMIC);
+    if (channel_id > 0)
+    {
+        lua_pushnumber(s, channel_id);
+    }
+    else
+    {
+        lua_pushnil(s);
+    }
+
+    return 1;
+}
+
+static int standard_del_channel(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_isnumber(s, -1))
+    {
+        return 0;
+    }
+
+    int channel_id = lua_tointeger(s, -1);
+    del_channel(channel_id);
+
+    return 0;
+}
+
+static int standard_join_channel(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    if (!lua_isstring(s, -1) || !lua_isnumber(s, -2))
+    {
+        lua_pushboolean(s, BSP_FALSE);
+
+        return 1;
+    }
+
+    const char *session_id = lua_tostring(s, -1);
+    int channel_id = lua_tointeger(s, -2);
+    BSPD_SESSION *session = check_session(session_id);
+    BSPD_CHANNEL *channel = check_channel(channel_id);
+
+    if (BSP_RTN_SUCCESS == add_session_to_channel(channel, session))
+    {
+        lua_pushboolean(s, BSP_TRUE);
+    }
+    else
+    {
+        lua_pushboolean(s, BSP_FALSE);
+    }
+
+    return 1;
+}
+
+static int standard_leave_channel(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    if (!lua_isstring(s, -1) || !lua_isnumber(s, -2))
+    {
+        lua_pushboolean(s, BSP_FALSE);
+
+        return 1;
+    }
+
+    const char *session_id = lua_tostring(s, -1);
+    int channel_id = lua_tointeger(s, -2);
+    BSPD_SESSION *session = check_session(session_id);
+    BSPD_CHANNEL *channel = check_channel(channel_id);
+
+    if (BSP_RTN_SUCCESS == remove_session_from_channel(channel, session))
+    {
+        lua_pushboolean(s, BSP_TRUE);
+    }
+    else
+    {
+        lua_pushboolean(s, BSP_FALSE);
+    }
+
+    return 1;
+}
+
 /* Module */
 int module_standard(lua_State *s)
 {
     if (!s || !lua_checkstack(s, 1))
     {
-        return 0;
+        return BSP_RTN_INVALID;
     }
 
     lua_pushcfunction(s, standard_net_close);
@@ -331,5 +490,17 @@ int module_standard(lua_State *s)
     lua_pushcfunction(s, standard_unreg_session);
     lua_setglobal(s, "bsp_unreg_session");
 
-    return 0;
+    lua_pushcfunction(s, standard_new_channel);
+    lua_setglobal(s, "bsp_new_channel");
+
+    lua_pushcfunction(s, standard_del_channel);
+    lua_setglobal(s, "bsp_del_channel");
+
+    lua_pushcfunction(s, standard_join_channel);
+    lua_setglobal(s, "bsp_join_channel");
+
+    lua_pushcfunction(s, standard_leave_channel);
+    lua_setglobal(s, "bsp_leave_channel");
+
+    return BSP_RTN_SUCCESS;
 }

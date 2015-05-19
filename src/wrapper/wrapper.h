@@ -43,8 +43,10 @@
 #define _WRAPPER_H
 
 int module_standard(lua_State *s);
+int module_misc(lua_State *s);
 
 #define LOAD_WRAPPERS(s) \
-    module_standard(s);
+    module_standard(s); \
+    module_misc(s);
 
 #endif  /* _WRAPPER_H */

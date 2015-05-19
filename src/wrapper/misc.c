@@ -1,6 +1,6 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
- * bspd.n
+ * misc.c
  * Copyright (C) 2015 Dr.NP <conan.np@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,14 +11,14 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Unknown nor the name of any other
+ * 3. Neither the name of Dr.NP nor the name of any other
  *    contributor may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY Unknown AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY Dr.NP AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL Unknown OR ANY OTHER
+ * ARE DISCLAIMED. IN NO EVENT SHALL Dr.NP OR ANY OTHER
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,50 +29,54 @@
  */
 
 /**
- * BSPd binary main header
+ * Misc apis for LUA
  *
  * @package bsp::duang
  * @author Dr.NP <np@bsgroup.org>
- * @update 02/27/2015
+ * @update 05/19/2015
  * @changelog
- *      [02/27/2015] - Creation
+ *      [04/19/1015] - Creation
  */
 
-#ifndef _BSPD_H
+#include "../bspd.h"
 
-#define _BSPD_H
-// Load libbsp
-#include "../config.h"
-#include "bsp.h"
-
-#define MAX_SESSION_ID_LENGTH           64
-#define CLIENT_LIST_INITIAL             65536
-#define CHANNEL_LIST_INITIAL            4096
-
-#include "serialization/serialization.h"
-#include "server/server.h"
-#include "protocol/protocol.h"
-#include "utils/utils.h"
-#include "wrapper/wrapper.h"
-
-typedef struct bspd_config_t
+// Generate a randomize value
+static int misc_random_int(lua_State *s)
 {
-    char                *config_file;
-    BSP_BOOTSTRAP_OPTIONS
-                        opt;
-    BSP_BOOLEAN         verbose;
-    const char          *script;
-    const char          *lua_hook_load;
+    if (!s || !lua_checkstack(s, 1))
+    {
+        return 0;
+    }
 
-    // Servers
-    struct bspd_server_t
-                        *servers;
-} BSPD_CONFIG;
+    int min = 0x80000000;
+    int max = 0x7FFFFFFF;
+    if (lua_isnumber(s, 2))
+    {
+        max = lua_tointeger(s, 2);
+    }
 
-// Definations
-#define lua_lock(L)                     ((void) 0)
+    if (lua_isnumber(s, 1))
+    {
+        min = lua_tointeger(s, 1);
+    }
 
-// Functions
-BSPD_CONFIG * get_global_config();
+    uint32_t value, range = (max - min);
+    bsp_rand((char *) &value, sizeof(uint32_t));
+    int rand = min + (value % range);
+    lua_pushinteger(s, rand);
 
-#endif  /* _BSPD_H */
+    return 1;
+}
+
+int module_misc(lua_State *s)
+{
+    if (!s || !lua_checkstack(s, 1))
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    lua_pushcfunction(s, misc_random_int);
+    lua_setglobal(s, "bsp_random_int");
+
+    return BSP_RTN_SUCCESS;
+}

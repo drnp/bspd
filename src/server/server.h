@@ -329,8 +329,9 @@ int bind_session(BSP_SOCKET_CLIENT *clt, BSPD_SESSION *session);
 int logon_session(BSPD_SESSION *session);
 int logoff_session(BSPD_SESSION *session);
 
-BSPD_CHANNEL * new_channel(BSPD_CHANNEL_TYPE type);
-int del_channel(BSPD_CHANNEL *channel);
+int new_channel(BSPD_CHANNEL_TYPE type);
+int del_channel(int channel_id);
+BSPD_CHANNEL * check_channel(int channel_id);
 int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
 int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
 

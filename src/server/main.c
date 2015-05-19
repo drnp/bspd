@@ -150,11 +150,12 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
     }
 
     BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+/*
     if (!session)
     {
         return len;
     }
-
+*/
     const char *input = STR_STR(bared->data);
     uint8_t hdr = (uint8_t) input[0];
 
@@ -187,10 +188,18 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
             case BSPD_CTL_SPEC : 
                 break;
             case BSPD_CTL_SERIALIZE : 
-                session->serialize_type = (BSPD_SERIALIZE_TYPE) ctl_data;
+                if (session)
+                {
+                    session->serialize_type = (BSPD_SERIALIZE_TYPE) ctl_data;
+                }
+
                 break;
             case BSPD_CTL_COMPRESS : 
-                session->compress_type = (BSPD_COMPRESS_TYPE) ctl_data;
+                if (session)
+                {
+                    session->compress_type = (BSPD_COMPRESS_TYPE) ctl_data;
+                }
+
                 break;
         }
 

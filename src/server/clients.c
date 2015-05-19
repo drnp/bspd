@@ -42,6 +42,9 @@
 
 static BSP_SOCKET_CLIENT **client_list = NULL;
 static size_t client_list_size = 0;
+static BSPD_CHANNEL **channel_list = NULL;
+static size_t channel_list_size = 0;
+static size_t next_channel_id = 0;
 static BSP_OBJECT *logged = NULL;
 static BSP_MEMPOOL *mp_session = NULL;
 static BSP_MEMPOOL *mp_channel = NULL;
@@ -59,6 +62,18 @@ int clients_init()
         }
 
         client_list_size = CLIENT_LIST_INITIAL;
+    }
+
+    // Channel list
+    if (!channel_list)
+    {
+        channel_list = bsp_calloc(CHANNEL_LIST_INITIAL, sizeof(BSPD_CHANNEL *));
+        if (!channel_list)
+        {
+            return BSP_RTN_ERR_MEMORY;
+        }
+
+        channel_list_size = CHANNEL_LIST_INITIAL;
     }
 
     // Login group
@@ -94,7 +109,8 @@ int clients_init()
     }
 
     // Global channel (All session)
-    global_channel = new_channel(BSPD_CHANNEL_ALL);
+    int global_channel_id = new_channel(BSPD_CHANNEL_ALL);
+    global_channel = check_channel(global_channel_id);
     if (!global_channel)
     {
         return BSP_RTN_ERR_MEMORY;
@@ -235,20 +251,58 @@ int logoff_session(BSPD_SESSION *session)
 }
 
 /* Channels */
-BSPD_CHANNEL * new_channel(BSPD_CHANNEL_TYPE type)
+int new_channel(BSPD_CHANNEL_TYPE type)
 {
-    BSPD_CHANNEL *ret = bsp_mempool_alloc(mp_channel);
-    if (ret)
+    BSPD_CHANNEL *channel = bsp_mempool_alloc(mp_channel);
+    if (channel)
     {
-        bzero(ret, sizeof(BSPD_CHANNEL));
-        ret->type = type;
+        bzero(channel, sizeof(BSPD_CHANNEL));
+        channel->type = type;
+
+        // Add into list+
+        channel_list[next_channel_id] = channel;
+        channel->id = next_channel_id;
+
+        // Find next
+        next_channel_id = 0;
+        size_t i;
+        for (i = next_channel_id + 1; i < channel_list_size; i ++)
+        {
+            if (!channel_list[i])
+            {
+                next_channel_id = i;
+                break;
+            }
+        }
+
+        if (!next_channel_id)
+        {
+            // List full
+            BSPD_CHANNEL **new_list = bsp_realloc(channel_list, 2 * client_list_size * sizeof(BSPD_CHANNEL *));
+            if (!new_list)
+            {
+                bsp_mempool_free(mp_channel, channel);
+
+                return -1;
+            }
+
+            channel_list = new_list;
+            next_channel_id = client_list_size;
+            client_list_size *= 2;
+        }
     }
 
-    return ret;
+    return channel->id;
 }
 
-int del_channel(BSPD_CHANNEL *channel)
+int del_channel(int channel_id)
 {
+    if (channel_id >= channel_list_size)
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    BSPD_CHANNEL *channel = channel_list[channel_id];
     if (!channel)
     {
         return BSP_RTN_INVALID;
@@ -262,12 +316,25 @@ int del_channel(BSPD_CHANNEL *channel)
 
     bsp_del_object(channel->list);
     bsp_mempool_free(mp_channel, channel);
+    channel_list[channel_id] = NULL;
+    if (channel_id < next_channel_id)
+    {
+        next_channel_id = channel_id;
+    }
+
     return BSP_RTN_SUCCESS;
 }
 
 BSPD_CHANNEL * check_channel(int channel_id)
 {
-    return NULL;
+    if (channel_id >= channel_list_size)
+    {
+        return NULL;
+    }
+
+    BSPD_CHANNEL *channel = channel_list[channel_id];
+
+    return channel;
 }
 
 int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
@@ -275,6 +342,19 @@ int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
     if (!channel || !session)
     {
         return BSP_RTN_INVALID;
+    }
+
+    if (!channel_list)
+    {
+        channel->list = bsp_new_object();
+        if (channel->list)
+        {
+            channel->list->type = BSP_OBJECT_HASH;
+        }
+        else
+        {
+            return BSP_RTN_ERR_MEMORY;
+        }
     }
 
     if (0 == strnlen(session->session_id, MAX_SESSION_ID_LENGTH))
@@ -306,21 +386,6 @@ int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
     }
 
     V_SET_POINTER(val, session);
-    if (!channel->list)
-    {
-        channel->list = bsp_new_object();
-        if (channel->list)
-        {
-            channel->list->type = BSP_OBJECT_HASH;
-        }
-        else
-        {
-            bsp_del_value(val);
-
-            return BSP_RTN_ERR_MEMORY;
-        }
-    }
-
     bsp_object_set_hash(channel->list, key, val);
 
     return BSP_RTN_SUCCESS;
