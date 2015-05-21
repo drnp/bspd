@@ -811,7 +811,6 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
     {
         case BSPD_SERIALIZE_JSON : 
             data = json_nd_encode(params, data);
-            debug_hex(STR_STR(data), STR_LEN(data));
             break;
         case BSPD_SERIALIZE_MSGPACK : 
             break;

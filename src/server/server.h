@@ -180,6 +180,7 @@ typedef struct bspd_session_t
     BSPD_COMPRESS_TYPE  compress_type;
     BSP_SOCKET_CLIENT   *bind;
     BSP_BOOLEAN         logged;
+    BSP_BOOLEAN         reported;
 } BSPD_SESSION;
 
 // Channel type
@@ -322,7 +323,8 @@ int reg_client(BSP_SOCKET_CLIENT *clt);
 int unreg_client(BSP_SOCKET_CLIENT *clt);
 BSP_SOCKET_CLIENT * check_client(int fd);
 
-BSPD_SESSION * new_session(const char *session_id);
+BSPD_SESSION * new_session();
+int set_session(BSPD_SESSION *session, const char *session_id);
 int del_session(BSPD_SESSION *session);
 BSPD_SESSION * check_session(const char *session_id);
 int bind_session(BSP_SOCKET_CLIENT *clt, BSPD_SESSION *session);

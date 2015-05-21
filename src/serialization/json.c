@@ -203,9 +203,7 @@ static void _append_object_to_json(BSP_STRING *json, BSP_OBJECT *obj)
             break;
         case BSP_OBJECT_HASH : 
             bsp_string_append(json, "{", 1);
-            debug_hex(STR_STR(json), STR_LEN(json));
             bsp_spin_lock(&obj->lock);
-            debug_hex(STR_STR(json), STR_LEN(json));
             val = bsp_object_curr(obj, (void **) &key);
             while (key && val)
             {

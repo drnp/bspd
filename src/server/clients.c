@@ -45,7 +45,6 @@ static size_t client_list_size = 0;
 static BSPD_CHANNEL **channel_list = NULL;
 static size_t channel_list_size = 0;
 static size_t next_channel_id = 0;
-static BSP_OBJECT *logged = NULL;
 static BSP_MEMPOOL *mp_session = NULL;
 static BSP_MEMPOOL *mp_channel = NULL;
 static BSPD_CHANNEL *global_channel = NULL;
@@ -74,18 +73,6 @@ int clients_init()
         }
 
         channel_list_size = CHANNEL_LIST_INITIAL;
-    }
-
-    // Login group
-    if (!logged)
-    {
-        logged = bsp_new_object();
-        if (!logged)
-        {
-            return BSP_RTN_ERR_GENERAL;
-        }
-
-        logged->type = BSP_OBJECT_HASH;
     }
 
     // Session pool
@@ -142,6 +129,8 @@ int reg_client(BSP_SOCKET_CLIENT *clt)
         client_list_size = new_size;
     }
 
+    BSPD_SESSION *session = new_session();
+    bind_session(clt, session);
     client_list[fd] = clt;
 
     return BSP_RTN_SUCCESS;
@@ -163,6 +152,13 @@ int unreg_client(BSP_SOCKET_CLIENT *clt)
         }
     }
 
+    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
+    if (session && BSP_FALSE == session->logged)
+    {
+        // Delete session
+        del_session(session);
+    }
+
     return BSP_RTN_SUCCESS;
 }
 
@@ -177,13 +173,8 @@ BSP_SOCKET_CLIENT * check_client(int fd)
 }
 
 /* User session */
-BSPD_SESSION * new_session(const char *session_id)
+BSPD_SESSION * new_session()
 {
-    if (!session_id)
-    {
-        return NULL;
-    }
-
     BSPD_SESSION *ret = bsp_mempool_alloc(mp_session);
     if (ret)
     {
@@ -192,11 +183,23 @@ BSPD_SESSION * new_session(const char *session_id)
         ret->serialize_type = BSPD_SERIALIZE_NATIVE;
         ret->compress_type = BSPD_COMPRESS_NONE;
         ret->logged = BSP_FALSE;
-        strncpy(ret->session_id, session_id, MAX_SESSION_ID_LENGTH - 1);
-        ret->session_id[MAX_SESSION_ID_LENGTH - 1] = 0x0;
+        ret->reported = BSP_FALSE;
     }
 
     return ret;
+}
+
+int set_session(BSPD_SESSION *session, const char *session_id)
+{
+    if (!session || !session_id)
+    {
+        return BSP_RTN_INVALID;
+    }
+
+    strncpy(session->session_id, session_id, MAX_SESSION_ID_LENGTH - 1);
+    session->session_id[MAX_SESSION_ID_LENGTH - 1] = 0x0;
+
+    return BSP_RTN_SUCCESS;
 }
 
 int del_session(BSPD_SESSION *session)
@@ -208,7 +211,7 @@ int del_session(BSPD_SESSION *session)
 
     // Try log off
     remove_session_from_channel(global_channel, session);
-
+    // TODO : Remove from all channels
     bsp_mempool_free(mp_session, session);
 
     return BSP_RTN_SUCCESS;
@@ -216,12 +219,12 @@ int del_session(BSPD_SESSION *session)
 
 BSPD_SESSION * check_session(const char *session_id)
 {
-    if (!session_id || !logged)
+    if (!session_id)
     {
         return NULL;
     }
 
-    BSP_VALUE *val = bsp_object_value_hash_original(logged, session_id);
+    BSP_VALUE *val = bsp_object_value_hash_original(global_channel->list, session_id);
     BSPD_SESSION *ret = (val) ? ((BSPD_SESSION *) (V_GET_POINTER(val))) : NULL;
 
     return ret;
@@ -242,12 +245,24 @@ int bind_session(BSP_SOCKET_CLIENT *clt, BSPD_SESSION *session)
 
 int logon_session(BSPD_SESSION *session)
 {
-    return add_session_to_channel(global_channel, session);
+    int ret = add_session_to_channel(global_channel, session);
+    if (BSP_RTN_SUCCESS == ret)
+    {
+        session->logged = BSP_TRUE;
+    }
+
+    return ret;
 }
 
 int logoff_session(BSPD_SESSION *session)
 {
-    return remove_session_from_channel(global_channel, session);
+    int ret = remove_session_from_channel(global_channel, session);
+    if (BSP_RTN_SUCCESS == ret)
+    {
+        session->logged = BSP_FALSE;
+    }
+
+    return ret;
 }
 
 /* Channels */
@@ -344,7 +359,7 @@ int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
         return BSP_RTN_INVALID;
     }
 
-    if (!channel_list)
+    if (!channel->list)
     {
         channel->list = bsp_new_object();
         if (channel->list)
@@ -402,12 +417,6 @@ int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
     {
         // No id
         return BSP_RTN_ERR_GENERAL;
-    }
-
-    BSP_SOCKET_CLIENT *clt = session->bind;
-    if (clt)
-    {
-        clt->additional = NULL;
     }
 
     BSP_STRING *key = bsp_new_const_string(session->session_id, -1);

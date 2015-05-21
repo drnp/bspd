@@ -302,27 +302,35 @@ static int standard_reg_session(lua_State *s)
     if (!clt)
     {
         // Client not exists
-        lua_pushboolean(s, BSP_FALSE);
+        lua_pushnil(s);
 
         return 1;
     }
 
     BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
-    if (session)
+    // Check previous logged session
+    BSPD_SESSION *old_session = check_session(session_id);
+    if (old_session)
     {
-        logoff_session(session);
-    }
-
-    session = new_session(session_id);
-    if (session)
-    {
-        bind_session(clt, session);
-        logon_session(session);
-        lua_pushlightuserdata(s, (void *) session);
+        if (session != old_session)
+        {
+            // Bind to client
+            del_session(session);
+            bind_session(clt, old_session);
+            lua_pushlightuserdata(s, (void *) old_session);
+        }
     }
     else
     {
-        lua_pushnil(s);
+        if (!session)
+        {
+            session = new_session();
+            bind_session(clt, session);
+        }
+
+        set_session(session, session_id);
+        logon_session(session);
+        lua_pushlightuserdata(s, (void *) session);
     }
 
     return 1;

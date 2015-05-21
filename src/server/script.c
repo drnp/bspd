@@ -475,6 +475,7 @@ static BSP_VALUE * _lua_value_to_value(lua_State *s, int idx)
             V_SET_STRING(ret, v_str);
             break;
         case LUA_TUSERDATA : 
+        case LUA_TLIGHTUSERDATA : 
             v_ptr = lua_touserdata(s, idx);
             V_SET_POINTER(ret, v_ptr);
             break;
