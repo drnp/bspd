@@ -80,23 +80,23 @@ static void _output_var(lua_State *s, int layer)
     switch (lua_type(s, -1))
     {
         case LUA_TNIL : 
-            fprintf(stderr, "(\033[1;34mNIL\033[0m)");
+            fprintf(stderr, "(\033[1;34mNIL\033[0m)\n");
             break;
         case LUA_TNUMBER : 
-            fprintf(stderr, "(\033[1;34mNUMBER\033[0m) - %g", lua_tonumber(s, -1));
+            fprintf(stderr, "(\033[1;34mNUMBER\033[0m) : %g\n", lua_tonumber(s, -1));
             break;
         case LUA_TBOOLEAN : 
-            fprintf(stderr, "(\033[1;34mBOOLEAN\033[0m) - %s", (lua_toboolean(s, -1)) ? "TRUE" : "FALSE");
+            fprintf(stderr, "(\033[1;34mBOOLEAN\033[0m) : %s\n", (lua_toboolean(s, -1)) ? "TRUE" : "FALSE");
             break;
         case LUA_TSTRING : 
-            fprintf(stderr, "(\033[1;34mSTRING\033[0m) - %s", lua_tostring(s, -1));
+            fprintf(stderr, "(\033[1;34mSTRING\033[0m) : %s\n", lua_tostring(s, -1));
             break;
         case LUA_TUSERDATA : 
         case LUA_TLIGHTUSERDATA : 
-            fprintf(stderr, "(\033[1;34mUSERDATA\033[0m) - %p", lua_touserdata(s, -1));
+            fprintf(stderr, "(\033[1;34mUSERDATA\033[0m) : %p\n", lua_touserdata(s, -1));
             break;
         case LUA_TFUNCTION : 
-            fprintf(stderr, "(\033[1;34mFUNCTION\033[0m)");
+            fprintf(stderr, "(\033[1;34mFUNCTION\033[0m)\n");
             break;
         case LUA_TTABLE : 
             fprintf(stderr, "(\033[1;34mTABLE\033[0m) =>\n");
@@ -112,14 +112,13 @@ static void _output_var(lua_State *s, int layer)
                 fprintf(stderr, "\033[1;32m%s\033[0m : ", lua_tostring(s, -1));
                 lua_pop(s, 1);
                 _output_var(s, layer + 1);
-                fprintf(stderr, "\n");
                 lua_pop(s, 1);
             }
 
-            lua_pop(s, 1);
+            //lua_pop(s, 1);
             break;
         default : 
-            fprintf(stderr, "(\033[1;33mNULL\033[0m)");
+            fprintf(stderr, "(\033[1;33mNULL\033[0m)\n");
             break;
     }
 
@@ -133,9 +132,9 @@ static int misc_var_dump(lua_State *s)
         return 0;
     }
 
-    fprintf(stderr, "\033[1;35m* * * Variable Dump * * *\033[0m\n");
+    fprintf(stderr, "\033[1;35m> > > Variable Dump > > >\033[0m\n");
     _output_var(s, 0);
-    fprintf(stderr, "\n\n");
+    fprintf(stderr, "\033[0;35m< < < Variable Dump < < <\033[0m\n\n");
 
     return 0;
 }

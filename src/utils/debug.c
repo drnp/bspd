@@ -153,7 +153,7 @@ static void _dump_object(BSP_OBJECT *obj, int layer)
                 _dump_value(val, layer);
             }
 
-            fprintf(stderr, "\n");
+            //fprintf(stderr, "\n");
             break;
         case BSP_OBJECT_HASH : 
             // Hash
@@ -179,7 +179,7 @@ static void _dump_object(BSP_OBJECT *obj, int layer)
                 val = bsp_object_curr(obj, (void **) &key);
             }
 
-            fprintf(stderr, "\n");
+            //fprintf(stderr, "\n");
             break;
         case BSP_OBJECT_UNDETERMINED : 
         default : 

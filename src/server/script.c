@@ -49,6 +49,8 @@ static BSPD_SCRIPT_TASK *task_queue_head = NULL;
 static BSPD_SCRIPT_TASK *task_queue_tail = NULL;
 static BSP_SPINLOCK task_queue_lock;
 
+inline size_t lua_table_size(lua_State *s, int idx);
+
 int script_init()
 {
     if (!mp_task)

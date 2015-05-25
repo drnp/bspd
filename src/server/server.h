@@ -308,7 +308,6 @@ int del_script_container(BSPD_SCRIPT *scrt);
 int restart_script_container(BSPD_SCRIPT *scrt);
 int load_script_file(BSPD_SCRIPT *scrt, const char *script_filename);
 int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script);
-inline size_t lua_table_size(lua_State *s, int idx);
 void object_to_lua(lua_State *s, BSP_OBJECT *obj);
 BSP_OBJECT * lua_to_object(lua_State *s, int idx);
 int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task);
