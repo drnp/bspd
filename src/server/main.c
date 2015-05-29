@@ -371,6 +371,7 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;
+        task->ptr = NULL;
         task->func = prop->lua_hook_connect;
         push_script_task(task);
     }
@@ -388,14 +389,13 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
     }
 
     BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
-    del_session(session);
-
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
     {
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;
+        task->ptr = (session) ? session->session_id : NULL;
         task->func = prop->lua_hook_disconnect;
         push_script_task(task);
     }
@@ -843,6 +843,7 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
             break;
     }
 */
+    //debug_hex(STR_STR(data), STR_LEN(data));
     unsigned char hdr = BSPD_PACKET_CMD << 6 | (session->compress_type) << 1;
     ret = _real_send(clt, hdr, data);
     bsp_del_string(data);

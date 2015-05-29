@@ -268,7 +268,6 @@ static int global_get(lua_State *s)
     }
 
     bsp_spin_unlock(&base_lock);
-    bsp_del_string(key);
 
     return 1;
 }

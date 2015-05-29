@@ -537,8 +537,10 @@ static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx)
             // Key
             key_str = lua_tolstring(s, -2, &key_len);
             key = bsp_new_string(key_str, key_len);
+
             // Value
             val = _lua_value_to_value(s, -1);
+
             bsp_object_set_hash(ret, key, val);
             lua_pop(s, 1);
         }
@@ -615,7 +617,8 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     {
         case BSPD_TASK_CTL : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            nargs = 1;
+            lua_pushstring(scrt->state, (const char *) task->ptr);
+            nargs = 2;
             break;
         case BSPD_TASK_RAW : 
         case BSPD_TASK_STREAM : 

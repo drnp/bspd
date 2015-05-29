@@ -2,7 +2,7 @@
     "global" : {
         "daemonize" : false, 
         "trace_level" : "notice", 
-        "script" : "/home/np/Projects/Tetris/src/main.lua", 
+        "script" : "/home/np/Projects/qground/lua/qground.lua", 
         "lua_hook_load" : "main"
     }, 
     "servers" : [
@@ -14,18 +14,6 @@
             "data_type" : "raw", 
             "debug_input" : false, 
             "debug_output": false
-        }, 
-        {
-            "name" : "login_server", 
-            "inet" : "ipv4", 
-            "sock" : "tcp", 
-            "addr" : "0.0.0.0", 
-            "port" : 25000, 
-            "type" : "normal", 
-            "data_type" : "raw", 
-            "lua_hook_connect" : "login_connect", 
-            "lua_hook_disconnect" : "login_disconnect", 
-            "lua_hook_data" : "login_data"
         }, 
         {
             "name" : "game_server", 
