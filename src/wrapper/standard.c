@@ -277,6 +277,7 @@ static int standard_net_send_channel(lua_State *s)
     return 1;
 }
 
+// Session
 static int standard_reg_session(lua_State *s)
 {
     if (!s)
@@ -403,6 +404,7 @@ static int standard_check_session(lua_State *s)
     return 1;
 }
 
+// Channel
 static int standard_new_channel(lua_State *s)
 {
     if (!s)
@@ -566,6 +568,106 @@ static int standard_list_channel(lua_State *s)
     return 1;
 }
 
+// Timer
+static void _trigger_timer(BSP_TIMER *tmr)
+{
+    fprintf(stderr, "Timer\n");
+
+    return;
+}
+
+static void _trigger_complete(BSP_TIMER *tmr)
+{
+    fprintf(stderr, "Timer complete\n");
+
+    return;
+}
+
+static int standard_new_timer(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    if (!lua_isnumber(s, 1))
+    {
+        lua_pushnil(s);
+
+        return 1;
+    }
+
+    struct timespec initial = {.tv_sec = 0, .tv_nsec = 0};
+    struct timespec interval = {.tv_sec = 0, .tv_nsec = 0};
+    ssize_t loop = 1;
+
+    double vinitial = lua_tonumber(s, 1);
+    initial.tv_sec = (time_t) vinitial;
+    initial.tv_nsec = (long) ((vinitial - (double) initial.tv_sec) * 1000000000);
+    if (lua_isnumber(s, 2))
+    {
+        // Has interval
+        double vinterval = lua_tonumber(s, 2);
+        interval.tv_sec = (time_t) vinterval;
+        interval.tv_nsec = (long) ((vinterval - (double) interval.tv_nsec) * 1000000000);
+    }
+
+    if (lua_isnumber(s, 3))
+    {
+        // Hash loop
+        loop = lua_tointeger(s, 3);
+    }
+
+    BSP_THREAD *t = bsp_self_thread();
+    if (!t)
+    {
+        // Cannot add timer to main thread
+        lua_pushnil(s);
+
+        return 1;
+    }
+
+    BSP_TIMER *tmr = bsp_new_timer(t->event_container, &initial, &interval, loop);
+
+    if (tmr)
+    {
+        tmr->on_timer = _trigger_timer;
+        tmr->on_complete = _trigger_complete;
+        lua_pushlightuserdata(s, (void *) tmr);
+    }
+    else
+    {
+        lua_pushnil(s);
+    }
+
+    return 1;
+}
+
+static int standard_stop_timer(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_islightuserdata(s, -1))
+    {
+        lua_pushnil(s);
+
+        return 1;
+    }
+
+    BSP_TIMER *tmr = (BSP_TIMER *) lua_touserdata(s, -1);
+    lua_pushboolean(s, (BSP_RTN_SUCCESS == bsp_del_timer(tmr)) ? 1 : 0);
+
+    return 1;
+}
+
 /* Module */
 int module_standard(lua_State *s)
 {
@@ -606,6 +708,12 @@ int module_standard(lua_State *s)
 
     lua_pushcfunction(s, standard_list_channel);
     lua_setglobal(s, "bsp_list_channel");
+
+    lua_pushcfunction(s, standard_new_timer);
+    lua_setglobal(s, "bsp_new_timer");
+
+    lua_pushcfunction(s, standard_stop_timer);
+    lua_setglobal(s, "bsp_stop_timer");
 
     return BSP_RTN_SUCCESS;
 }

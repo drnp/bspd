@@ -916,6 +916,19 @@ static void _callback_reload_conf()
     return;
 }
 
+// Base clock (1 Hz) trigger event
+static void _on_base_clock(BSP_TIMER *tmr)
+{
+    if (!tmr)
+    {
+        return;
+    }
+
+    //fprintf(stderr, "%d\n", (int) tmr->count);
+
+    return;
+}
+
 // Portal
 int bspd_startup()
 {
@@ -957,6 +970,9 @@ int bspd_startup()
 
     parse_conf(conf);
     bsp_prepare(&c->opt);
+
+    // Waiting for all threads
+    sleep(1);
 
     int i = 0;
     BSP_THREAD *t = NULL;
@@ -1045,12 +1061,32 @@ int bspd_startup()
     for (i = 0; i < c->opt.worker_threads; i ++)
     {
         t = bsp_get_thread(BSP_THREAD_WORKER, i);
-        scrt = new_script_container();
-        if (scrt)
+        if (t)
         {
-            t->additional = (void *) scrt;
-            LOAD_WRAPPERS(scrt->state)
-            load_script_file(scrt, c->script);
+            scrt = new_script_container();
+            if (scrt)
+            {
+                t->additional = (void *) scrt;
+                LOAD_WRAPPERS(scrt->state)
+                load_script_file(scrt, c->script);
+            }
+        }
+    }
+
+    t = bsp_get_thread(BSP_THREAD_BOSS, 0);
+    if (t)
+    {
+        struct timespec one_hz = {.tv_sec = 1, .tv_nsec = 0};
+        BSP_TIMER *base_clock = bsp_new_timer(t->event_container, &one_hz, &one_hz, -1);
+        if (base_clock)
+        {
+            base_clock->on_timer = _on_base_clock;
+        }
+        else
+        {
+            fprintf(stderr, "No base timer\n");
+
+            return bsp_shutdown();
         }
     }
 
