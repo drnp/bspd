@@ -184,6 +184,8 @@ BSPD_SESSION * new_session()
         ret->compress_type = BSPD_COMPRESS_NONE;
         ret->logged = BSP_FALSE;
         ret->reported = BSP_FALSE;
+        ret->static_channel = -1;
+        ret->dynamic_channel = -1;
     }
 
     return ret;
@@ -212,6 +214,25 @@ int del_session(BSPD_SESSION *session)
     // Try log off
     remove_session_from_channel(global_channel, session);
     // TODO : Remove from all channels
+    BSPD_CHANNEL *channel = NULL;
+    if (session->static_channel > 0)
+    {
+        channel = check_channel(session->static_channel);
+        if (channel && BSPD_CHANNEL_STATIC == channel->type)
+        {
+            remove_session_from_channel(channel, session);
+        }
+    }
+
+    if (session->dynamic_channel > 0)
+    {
+        channel = check_channel(session->dynamic_channel);
+        if (channel && BSPD_CHANNEL_DYNAMIC == channel->type)
+        {
+            remove_session_from_channel(channel, session);
+        }
+    }
+
     bsp_mempool_free(mp_session, session);
 
     return BSP_RTN_SUCCESS;
@@ -413,6 +434,26 @@ int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
         return BSP_RTN_INVALID;
     }
 
+    if (BSPD_CHANNEL_STATIC == channel->type)
+    {
+        if (channel->id != session->static_channel)
+        {
+            return BSP_RTN_INVALID;
+        }
+
+        session->static_channel = -01;
+    }
+
+    if (BSPD_CHANNEL_DYNAMIC == channel->type)
+    {
+        if (channel->id != session->dynamic_channel)
+        {
+            return BSP_RTN_INVALID;
+        }
+
+        session->dynamic_channel = -01;
+    }
+
     if (0 == strnlen(session->session_id, MAX_SESSION_ID_LENGTH))
     {
         // No id
@@ -427,6 +468,7 @@ int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session)
     if (0 == bsp_object_size(channel->list))
     {
         // TODO del_channel
+        del_channel(channel->id);
     }
 
     return BSP_RTN_SUCCESS;

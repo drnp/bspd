@@ -568,6 +568,50 @@ static int standard_list_channel(lua_State *s)
     return 1;
 }
 
+static int standard_check_channel(lua_State *s)
+{
+    if (!s)
+    {
+        return 0;
+    }
+
+    if (!lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    const char *session_id = lua_tostring(s, -1);
+    if (!session_id)
+    {
+        lua_pushnil(s);
+
+        return 1;
+    }
+
+    BSPD_SESSION *session = check_session(session_id);
+    if (!session)
+    {
+        lua_pushnil(s);
+
+        return 1;
+    }
+
+    lua_newtable(s);
+    lua_pushstring(s, "global");
+    lua_pushinteger(s, 0);
+    lua_settable(s, -3);
+
+    lua_pushstring(s, "static");
+    lua_pushinteger(s, session->static_channel);
+    lua_settable(s, -3);
+
+    lua_pushstring(s, "dynamic");
+    lua_pushinteger(s, session->dynamic_channel);
+    lua_settable(s, -3);
+
+    return 1;
+}
+
 // Timer
 static void _trigger_timer(BSP_TIMER *tmr)
 {
@@ -708,6 +752,9 @@ int module_standard(lua_State *s)
 
     lua_pushcfunction(s, standard_list_channel);
     lua_setglobal(s, "bsp_list_channel");
+
+    lua_pushcfunction(s, standard_check_channel);
+    lua_setglobal(s, "bsp_check_channel");
 
     lua_pushcfunction(s, standard_new_timer);
     lua_setglobal(s, "bsp_new_timer");

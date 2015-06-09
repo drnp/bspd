@@ -181,6 +181,8 @@ typedef struct bspd_session_t
     BSP_SOCKET_CLIENT   *bind;
     BSP_BOOLEAN         logged;
     BSP_BOOLEAN         reported;
+    int                 static_channel;
+    int                 dynamic_channel;
 } BSPD_SESSION;
 
 // Channel type
