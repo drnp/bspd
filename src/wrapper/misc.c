@@ -68,6 +68,67 @@ static int misc_random_int(lua_State *s)
     return 1;
 }
 
+// Base encoder & decoder
+static int misc_base64_encode(lua_State *s)
+{
+    if (!s || !lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    size_t len;
+    const char *str = lua_tolstring(s, -1, &len);
+    if (str)
+    {
+        BSP_STRING *input = bsp_new_const_string(str, len);
+        BSP_STRING *output = bsp_string_base64_encode(input);
+
+        if (output && STR_STR(output))
+        {
+            lua_pushlstring(s, STR_STR(output), STR_LEN(output));
+        }
+
+        bsp_del_string(input);
+        bsp_del_string(output);
+    }
+    else
+    {
+        lua_pushnil(s);
+    }
+
+    return 1;
+}
+
+static int misc_base64_decode(lua_State *s)
+{
+    if (!s || !lua_checkstack(s, 1))
+    {
+        return 0;
+    }
+
+    size_t len;
+    const char *str = lua_tolstring(s, -1, &len);
+    if (str)
+    {
+        BSP_STRING *input = bsp_new_const_string(str, len);
+        BSP_STRING *output = bsp_string_base64_decode(input);
+
+        if (output && STR_STR(output))
+        {
+            lua_pushlstring(s, STR_STR(output), STR_LEN(output));
+        }
+
+        bsp_del_string(input);
+        bsp_del_string(output);
+    }
+    else
+    {
+        lua_pushnil(s);
+    }
+
+    return 1;
+}
+
 // Dump table
 static void _output_var(lua_State *s, int layer)
 {
@@ -148,6 +209,12 @@ int module_misc(lua_State *s)
 
     lua_pushcfunction(s, misc_random_int);
     lua_setglobal(s, "bsp_random_int");
+
+    lua_pushcfunction(s, misc_base64_encode);
+    lua_setglobal(s, "bsp_base64_encode");
+
+    lua_pushcfunction(s, misc_base64_decode);
+    lua_setglobal(s, "bsp_base64_decode");
 
     lua_pushcfunction(s, misc_var_dump);
     lua_setglobal(s, "bsp_var_dump");
