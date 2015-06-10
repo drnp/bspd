@@ -560,7 +560,6 @@ BSP_OBJECT * lua_to_object(lua_State *s, int idx)
     if (lua_istable(s, idx))
     {
         // Array or hash
-        debug_lua_stack(s);
         ret = _lua_table_to_object(s, idx);
     }
     else
