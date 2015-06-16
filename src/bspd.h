@@ -58,9 +58,11 @@
 typedef struct bspd_config_t
 {
     char                *config_file;
+    char                *pid_file;
     BSP_BOOTSTRAP_OPTIONS
                         opt;
     BSP_BOOLEAN         verbose;
+    BSP_BOOLEAN         daemonize;
     const char          *script;
     const char          *lua_hook_load;
 

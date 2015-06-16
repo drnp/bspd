@@ -1,6 +1,6 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
- * utils.h
+ * compress.c
  * Copyright (C) 2015 Dr.NP <conan.np@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,37 +29,58 @@
  */
 
 /**
- * BSPD utils' header
+ * Compress and decompress wrapper
  *
- * @package bsp::duang
+ * @package bsp::dunag
  * @author Dr.NP <np@bsgroup.org>
- * @update 03/23/2015
+ * @update 06/11/2015
  * @changelog
- *      [03/23/2015] - Creation
+ *      [06/11/2015] - Creation
  */
 
-#ifndef _UTILS_H
+#include "../bspd.h"
 
-#define _UTILS_H
-// Compressor
-BSP_STRING * zlib_compress(BSP_STRING *input);
-BSP_STRING * zlib_decompress(BSP_STRING *input);
-BSP_STRING * snappy_compress(BSP_STRING *input);
-BSP_STRING * snappy_decompress(BSP_STRING *input);
-BSP_STRING * lz4_compress(BSP_STRING *input);
-BSP_STRING * lz4_decompress(BSP_STRING *input);
+/* Zlib */
+BSP_STRING * zlib_compress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
 
-// Debugger
-void debug_object(BSP_OBJECT *obj);
-void debug_value(BSP_VALUE *val);
-void debug_hex(const char *data, size_t len);
-void debug_lua_stack(lua_State *s);
-void show_trace(BSP_TRACE *bt);
+    return ret;
+}
 
-// Misc
-char * get_dir();
-int set_dir(const char *dir);
-int save_pid();
-pid_t proc_daemonize();
+BSP_STRING * zlib_decompress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
 
-#endif  /* _UTILS_H */
+    return ret;
+}
+
+/* Snappy */
+BSP_STRING * snappy_compress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
+
+    return ret;
+}
+
+BSP_STRING * snappy_decompress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
+
+    return ret;
+}
+
+/* Lz4 */
+BSP_STRING * lz4_compress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
+
+    return ret;
+}
+
+BSP_STRING * lz4_decompress(BSP_STRING *input)
+{
+    BSP_STRING *ret = NULL;
+
+    return ret;
+}

@@ -56,55 +56,6 @@ int bared_init()
     return BSP_RTN_SUCCESS;
 }
 
-/*
-// Get location of process
-static char * _get_dir()
-{
-    char self_name[_POSIX_PATH_MAX];
-    char *ret = NULL;
-    char *curr;
-    ssize_t nbytes = readlink("/proc/self/exe", self_name, _POSIX_PATH_MAX - 1);
-
-    if (-1 == nbytes)
-    {
-        ret = "./";
-    }
-    else
-    {
-        self_name[nbytes] = 0x0;
-        ret = realpath(self_name, NULL);
-        curr = strrchr(ret, '/');
-
-        if (curr)
-        {
-            curr[0] = 0x0;
-            curr = strrchr(ret, '/');
-            // Prev layer
-            if (curr)
-            {
-                curr[0] = 0x0;
-            }
-        }
-    }
-
-    return ret;
-}
-*/
-
-static void _set_dir(const char *dir)
-{
-    if (0 == chdir(dir))
-    {
-        bsp_trace_message(BSP_TRACE_NOTICE, "bspd", "Change current working directory to %s", dir);
-    }
-    else
-    {
-        bsp_trace_message(BSP_TRACE_ERROR, "bspd", "Change current working directory failed");
-    }
-
-    return;
-}
-
 static void _worker_on_poke(BSP_THREAD *t)
 {
     if (!t || !t->additional)
@@ -943,7 +894,7 @@ int bspd_startup()
     }
 
     // Set current working directory to $prefix
-    _set_dir(BSPD_PREFIX_DIR);
+    set_dir(BSPD_PREFIX_DIR);
     BSPD_CONFIG *c = get_global_config();
     if (!c)
     {
@@ -969,10 +920,13 @@ int bspd_startup()
     }
 
     parse_conf(conf);
-    bsp_prepare(&c->opt);
+    if (BSP_TRUE == c->daemonize)
+    {
+        c->opt.daemonize = BSP_TRUE;
+        proc_daemonize();
+    }
 
-    // Waiting for all threads
-    sleep(1);
+    bsp_prepare(&c->opt);
 
     int i = 0;
     BSP_THREAD *t = NULL;

@@ -53,6 +53,7 @@ static void _usage()
     fprintf(stderr, "\n\033[1;37mBSPD (\033[0m\033[1;32mgPVP\033[0m\033[1;37m) server. libbsp version :\033[0m \033[1;34m%s\033[0m\n", BSP_LIB_VERSION);
     fprintf(stderr, "========================================================================================\n");
     fprintf(stderr, "\t\033[1;33m-c\033[0m : Configuration file.\n");
+    fprintf(stderr, "\t\033[1;33m-p\033[0m : PID file.\n");
     fprintf(stderr, "\t\033[1;33m-v\033[0m : Verbose mode (Set trace level to ALL).\n");
     fprintf(stderr, "\t\033[1;33m-h\033[0m : Display this topic.\n");
     fprintf(stderr, "\n\n");
@@ -65,12 +66,16 @@ int main(int argc, char *const *argv)
 {
     bzero(&global_config, sizeof(BSPD_CONFIG));
     global_config.verbose = BSP_FALSE;
+    global_config.daemonize = BSP_FALSE;
     int c;
     char config_file[_POSIX_PATH_MAX];
     snprintf(config_file, _POSIX_PATH_MAX - 1, "%s/%s", BSPD_PREFIX_DIR, BSPD_CONF_FILE);
     config_file[_POSIX_PATH_MAX - 1] = 0x0;
+    char pid_file[_POSIX_PATH_MAX];
+    snprintf(pid_file, _POSIX_PATH_MAX - 1, "%s/%s", BSPD_PREFIX_DIR, BSPD_PID_FILE);
+    pid_file[_POSIX_PATH_MAX - 1] = 0x0;
 
-    while (-1 != (c = getopt(argc, argv, "c:vh")))
+    while (-1 != (c = getopt(argc, argv, "c:p:vdh")))
     {
         switch (c)
         {
@@ -87,7 +92,14 @@ int main(int argc, char *const *argv)
                 // Configuration file
                 snprintf(config_file, _POSIX_PATH_MAX - 1, "%s", optarg);
                 config_file[_POSIX_PATH_MAX - 1] = 0x0;
-                global_config.config_file = bsp_strdup(optarg);
+                break;
+            case 'p' : 
+                // PID file
+                snprintf(pid_file, _POSIX_PATH_MAX - 1, "%s", optarg);
+                pid_file[_POSIX_PATH_MAX - 1] = 0x0;
+                break;
+            case 'd' : 
+                global_config.daemonize = BSP_TRUE;
                 break;
             default : 
                 // Do nothing
@@ -95,7 +107,8 @@ int main(int argc, char *const *argv)
         }
     }
 
-    global_config.config_file = config_file;
+    global_config.config_file = bsp_strdup(config_file);
+    global_config.pid_file = bsp_strdup(pid_file);
     bspd_startup();
     bsp_shutdown();
 

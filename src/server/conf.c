@@ -310,7 +310,10 @@ int parse_conf(BSP_OBJECT *conf)
         sub = bsp_object_value_hash_original(global, "daemonize");
         if (sub)
         {
-            c->opt.daemonize = V_GET_BOOLEAN(sub);
+            if (BSP_FALSE == c->daemonize)
+            {
+                c->daemonize = V_GET_BOOLEAN(sub);
+            }
         }
 
         sub = bsp_object_value_hash_original(global, "boss_threads");
