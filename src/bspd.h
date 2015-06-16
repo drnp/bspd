@@ -49,6 +49,8 @@
 #define CLIENT_LIST_INITIAL             65536
 #define CHANNEL_LIST_INITIAL            4096
 
+#define LOG_FILENAME                    "bspd.log"
+
 #include "serialization/serialization.h"
 #include "server/server.h"
 #include "protocol/protocol.h"
@@ -59,6 +61,7 @@ typedef struct bspd_config_t
 {
     char                *config_file;
     char                *pid_file;
+    char                *log_file;
     BSP_BOOTSTRAP_OPTIONS
                         opt;
     BSP_BOOLEAN         verbose;

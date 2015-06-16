@@ -904,8 +904,10 @@ int bspd_startup()
     }
 
     c->opt.mode = BSP_BOOTSTRAP_SERVER;
-    c->opt.trace_level = I_ERR;
+    c->opt.trace_level = I_NONE;
     c->opt.trace_recipient = show_trace;
+    c->opt.log_level = I_ALL;
+    c->opt.log_recipient = append_log;
     c->opt.worker_hook_notify = _worker_on_poke;
 
     c->opt.signal_on_usr1 = _callback_reload_script;
@@ -927,6 +929,7 @@ int bspd_startup()
     }
 
     bsp_prepare(&c->opt);
+    save_pid();
 
     int i = 0;
     BSP_THREAD *t = NULL;
@@ -1044,7 +1047,7 @@ int bspd_startup()
         }
     }
 
-    fprintf(stderr, "\n\033[1;37mBSPD (\033[0m\033[1;32mgPVP\033[0m\033[1;37m) server started\033[0m\n\n");
+    fprintf(stderr, "\n\033[1;37mBSPD server started\033[0m\nLibbsp version : %s\n\n", BSP_LIB_VERSION);
 
     return bsp_startup();
 }

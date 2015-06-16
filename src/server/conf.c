@@ -307,6 +307,55 @@ int parse_conf(BSP_OBJECT *conf)
             c->opt.trace_level = I_ALL;
         }
 
+        sub = bsp_object_value_hash_original(global, "log_level");
+        if (sub)
+        {
+            str = V_GET_STRING(sub);
+            if (str)
+            {
+                if (0 == strncasecmp(STR_STR(str), "none", 4))
+                {
+                    c->opt.log_level = I_NONE;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "emerg", 5))
+                {
+                    c->opt.log_level = I_EMERG;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "alert", 5))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "crit", 4))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "err", 3))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT | I_ERR;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "warn", 4))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT | I_ERR | I_WARN;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "notice", 6))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT | I_ERR | I_WARN | I_NOTICE;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "info", 4))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT | I_ERR | I_WARN | I_NOTICE | I_INFO;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "debug", 5))
+                {
+                    c->opt.log_level = I_EMERG | I_ALERT | I_CRIT | I_ERR | I_WARN | I_NOTICE | I_INFO | I_DEBUG;
+                }
+                else if (0 == strncasecmp(STR_STR(str), "all", 3))
+                {
+                    c->opt.log_level = I_ALL;
+                }
+            }
+        }
+
         sub = bsp_object_value_hash_original(global, "daemonize");
         if (sub)
         {

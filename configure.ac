@@ -85,6 +85,7 @@ AC_CACHE_CHECK(
 AC_DEFINE_UNQUOTED([BSPD_PREFIX_DIR], ["$prefix"], [Prefix directory of BSP application])
 AC_DEFINE_UNQUOTED([BSPD_CONF_FILE], ["etc/bspd.runtime.conf"], [Configuration of BSP application])
 AC_DEFINE_UNQUOTED([BSPD_PID_FILE], ["run/bspd.pid"], [PID file path])
+AC_DEFINE_UNQUOTED([BSPD_LOG_DIR], ["log/"], [Log directory])
 
 if test "$ac_cv_header_stdint_h" = "yes"; then
     AC_SUBST([ac_cv_have_stdint_h], [1])

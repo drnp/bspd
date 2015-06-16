@@ -74,6 +74,9 @@ int main(int argc, char *const *argv)
     char pid_file[_POSIX_PATH_MAX];
     snprintf(pid_file, _POSIX_PATH_MAX - 1, "%s/%s", BSPD_PREFIX_DIR, BSPD_PID_FILE);
     pid_file[_POSIX_PATH_MAX - 1] = 0x0;
+    char log_file[_POSIX_PATH_MAX];
+    snprintf(log_file, _POSIX_PATH_MAX - 1, "%s/%s/%s", BSPD_PREFIX_DIR, BSPD_LOG_DIR, LOG_FILENAME);
+    log_file[_POSIX_PATH_MAX - 1] = 0x0;
 
     while (-1 != (c = getopt(argc, argv, "c:p:vdh")))
     {
@@ -107,8 +110,10 @@ int main(int argc, char *const *argv)
         }
     }
 
+    // Maybe leak here, hehehe~~~
     global_config.config_file = bsp_strdup(config_file);
     global_config.pid_file = bsp_strdup(pid_file);
+    global_config.log_file = bsp_strdup(log_file);
     bspd_startup();
     bsp_shutdown();
 

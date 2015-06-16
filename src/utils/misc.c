@@ -144,9 +144,9 @@ pid_t proc_daemonize()
     int fd = open("/dev/null", O_RDWR, 0);
     if (fd)
     {
-        //(void) dup2(fd, STDIN_FILENO);
-        //(void) dup2(fd, STDOUT_FILENO);
-        //(void) dup2(fd, STDERR_FILENO);
+        (void) dup2(fd, STDIN_FILENO);
+        (void) dup2(fd, STDOUT_FILENO);
+        (void) dup2(fd, STDERR_FILENO);
         if (fd > STDERR_FILENO)
         {
             close(fd);
