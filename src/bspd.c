@@ -40,7 +40,7 @@
 
 #include "bspd.h"
 
-BSPD_CONFIG global_config;
+static BSPD_CONFIG global_config;
 
 // Get global configuration
 BSPD_CONFIG * get_global_config()
@@ -116,6 +116,8 @@ int main(int argc, char *const *argv)
     global_config.log_file = bsp_strdup(log_file);
     bspd_startup();
     bsp_shutdown();
+    close_log();
+    close_binary_log();
 
     return BSP_RTN_SUCCESS;
 }

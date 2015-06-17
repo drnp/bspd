@@ -56,7 +56,9 @@ void debug_hex(const char *data, size_t len);
 void debug_lua_stack(lua_State *s);
 void show_trace(BSP_TRACE *bt);
 void append_log(BSP_TRACE *bt);
+void close_log();
 void append_binary_log(BSP_TRACE *bt);
+void close_binary_log();
 
 // Misc
 char * get_dir();

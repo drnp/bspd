@@ -40,8 +40,10 @@
 
 #include "../bspd.h"
 
-BSP_SPINLOCK log_lock = BSP_SPINLOCK_INITIALIZER;
-FILE *log_fp = NULL;
+static BSP_SPINLOCK log_lock = BSP_SPINLOCK_INITIALIZER;
+static BSP_SPINLOCK binary_log_lock = BSP_SPINLOCK_INITIALIZER;
+static FILE *log_fp = NULL;
+static FILE *binary_log_fp = NULL;
 
 static void _dump_value(BSP_VALUE *val, int layer);
 static void _dump_object(BSP_OBJECT *obj, int layer);
@@ -371,6 +373,7 @@ void append_log(BSP_TRACE *bt)
     localtime_r(&bt->localtime, &loctime);
     strftime(tgdata, 64, "%m/%d%Y %H:%M:%S", &loctime);
 
+    bsp_spin_lock(&log_lock);
     if (!log_fp)
     {
         BSPD_CONFIG *c = get_global_config();
@@ -379,8 +382,21 @@ void append_log(BSP_TRACE *bt)
 
     if (log_fp)
     {
-        bsp_spin_lock(&log_lock);
         fprintf(log_fp, "[%s][%s]-[%s] : %s\n", tgdata, lstr[idx], bt->tag, bt->msg);
+    }
+
+    bsp_spin_unlock(&log_lock);
+
+    return;
+}
+
+void close_log()
+{
+    if (log_fp)
+    {
+        bsp_spin_lock(&log_lock);
+        fclose(log_fp);
+        log_fp = NULL;
         bsp_spin_unlock(&log_lock);
     }
 
@@ -389,5 +405,18 @@ void append_log(BSP_TRACE *bt)
 
 void append_binary_log(BSP_TRACE *bt)
 {
+    return;
+}
+
+void close_binary_log()
+{
+    if (binary_log_fp)
+    {
+        bsp_spin_lock(&binary_log_lock);
+        fclose(binary_log_fp);
+        binary_log_fp = NULL;
+        bsp_spin_unlock(&binary_log_lock);
+    }
+
     return;
 }

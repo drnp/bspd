@@ -867,6 +867,14 @@ static void _callback_reload_conf()
     return;
 }
 
+// WINCH : Reopen log file
+static void _callback_reopen_log()
+{
+    close_log();
+
+    return;
+}
+
 // Base clock (1 Hz) trigger event
 static void _on_base_clock(BSP_TIMER *tmr)
 {
@@ -876,6 +884,17 @@ static void _on_base_clock(BSP_TIMER *tmr)
     }
 
     //fprintf(stderr, "%d\n", (int) tmr->count);
+    int i;
+    BSP_THREAD *t;
+    BSPD_CONFIG *c = get_global_config();
+    for (i = 0; i < c->opt.worker_threads; i ++)
+    {
+        t = bsp_get_thread(BSP_THREAD_WORKER, i);
+        if (t)
+        {
+            scrt = (BSPD_SCRIP *) t->additional;
+        }
+    }
 
     return;
 }
@@ -913,6 +932,7 @@ int bspd_startup()
     c->opt.signal_on_usr1 = _callback_reload_script;
     c->opt.signal_on_usr2 = _callback_reload_state;
     c->opt.signal_on_tstp = _callback_reload_conf;
+    c->opt.signal_on_hup = _callback_reopen_log;
 
     // Load config
     BSP_OBJECT *conf = get_conf_from_file(c->config_file);
