@@ -883,16 +883,18 @@ static void _on_base_clock(BSP_TIMER *tmr)
         return;
     }
 
-    //fprintf(stderr, "%d\n", (int) tmr->count);
-    int i;
     BSP_THREAD *t;
+    BSPD_SCRIPT *scrt;
     BSPD_CONFIG *c = get_global_config();
-    for (i = 0; i < c->opt.worker_threads; i ++)
+    if (0 == (tmr->count & 0xFF))
     {
+        // Gc one script per 256 seconds
+        int i = (tmr->count >> 8) % c->opt.worker_threads;
         t = bsp_get_thread(BSP_THREAD_WORKER, i);
         if (t)
         {
-            scrt = (BSPD_SCRIP *) t->additional;
+            scrt = (BSPD_SCRIPT *) t->additional;
+            lua_gc(scrt->state, LUA_GCCOLLECT, 0);
         }
     }
 
