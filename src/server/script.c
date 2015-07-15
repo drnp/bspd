@@ -501,7 +501,7 @@ static BSP_OBJECT * _lua_table_to_object(lua_State *s, int idx)
     }
 
     idx = lua_absindex(s, idx);
-    BSP_OBJECT *ret = bsp_new_object();
+    BSP_OBJECT *ret = bsp_new_object(BSP_OBJECT_UNDETERMINED);
     BSP_VALUE *val = NULL;
     if (!ret)
     {
@@ -564,7 +564,7 @@ BSP_OBJECT * lua_to_object(lua_State *s, int idx)
     }
     else
     {
-        ret = bsp_new_object();
+        ret = bsp_new_object(BSP_OBJECT_SINGLE);
         ret->type = BSP_OBJECT_SINGLE;
         bsp_object_set_single(ret, _lua_value_to_value(s, idx));
     }

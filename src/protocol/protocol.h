@@ -43,7 +43,6 @@
 #define _PROTOCOL_H
 typedef struct bspd_http_request_t
 {
-    
 } BSPD_HTTP_REQUEST;
 
 // Internal server

@@ -894,6 +894,7 @@ static void _on_base_clock(BSP_TIMER *tmr)
         if (t)
         {
             scrt = (BSPD_SCRIPT *) t->additional;
+            bsp_trace_message(BSP_TRACE_NOTICE, "bspd", "Try to run gabbage collection on script %d", i);
             lua_gc(scrt->state, LUA_GCCOLLECT, 0);
         }
     }
@@ -975,35 +976,49 @@ int bspd_startup()
         if (curr->srv)
         {
             // Dispatch to thread pool
-            BSP_EVENT ev;
+            BSP_FD *f;
+            BSP_EVENT_SPEC *ev;
             for (i = 0; i < curr->srv->nscks; i ++)
             {
+                f = NULL;
+                ev = NULL;
                 switch (curr->srv->scks[i].sock_type)
                 {
                     case BSP_SOCK_TCP : 
-                        t = bsp_select_thread(BSP_THREAD_ACCEPTOR);
-                        ev.data.fd_type = BSP_FD_SOCKET_SERVER_TCP;
-                        ev.events = BSP_EVENT_ACCEPT;
-                        break;
                     case BSP_SOCK_SCTP_TO_ONE : 
                     case BSP_SOCK_SCTP_TO_MANY : 
                         t = bsp_select_thread(BSP_THREAD_ACCEPTOR);
-                        ev.data.fd_type = BSP_FD_SOCKET_SERVER_SCTP;
-                        ev.events = BSP_EVENT_ACCEPT;
+                        if (t)
+                        {
+                            f = bsp_reg_fd(curr->srv->scks[i].fd, curr->srv->scks[i].fd_type, curr->srv);
+                            if (f)
+                            {
+                                ev = FD_EVENT(f);
+                                ev->events = BSP_EVENT_ACCEPT;
+                            }
+                        }
+
                         break;
                     case BSP_SOCK_UDP : 
                     default : 
                         t = bsp_select_thread(BSP_THREAD_IO);
-                        ev.data.fd_type = BSP_FD_SOCKET_SERVER_UDP;
-                        ev.events = BSP_EVENT_READ;
+                        if (t)
+                        {
+                            f = bsp_reg_fd(curr->srv->scks[i].fd, curr->srv->scks[i].fd_type, curr->srv);
+                            if (f)
+                            {
+                                ev = FD_EVENT(f);
+                                ev->events = BSP_EVENT_ACCEPT;
+                            }
+                        }
+
                         break;
                 }
 
-                ev.data.fd = curr->srv->scks[i].fd;
-                ev.data.associate.ptr = (void *) &curr->srv->scks[i];
-                if (t)
+                if (t && f)
                 {
-                    bsp_add_event(t->event_container, &ev);
+                    ev->container = t->event_container;
+                    bsp_set_event(f->fd);
                 }
             }
 

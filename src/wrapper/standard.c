@@ -63,7 +63,7 @@ static int standard_net_close(lua_State *s)
     {
         // Close session
         session_id = lua_tostring(s, -1);
-        session = check_session(session_id);
+        session = check_logged_session(session_id);
         if (session)
         {
             clt = session->bind;
@@ -107,7 +107,7 @@ static int standard_net_send(lua_State *s)
     {
         // Send to session
         session_id = lua_tostring(s, 1);
-        session = check_session(session_id);
+        session = check_logged_session(session_id);
         if (session)
         {
             clt = session->bind;
@@ -172,15 +172,18 @@ static int standard_net_send_channel(lua_State *s)
         return 0;
     }
 
-    if (!lua_isnumber(s, 1))
+    BSPD_CHANNEL *channel = NULL;
+    if (lua_isnumber(s, 1))
     {
-        lua_pushnil(s);
-
-        return 1;
+        int channel_id = lua_tointeger(s, 1);
+        channel = check_dynamic_channel(channel_id);
+    }
+    else if (lua_isstring(s, 1))
+    {
+        const char *channel_name = lua_tostring(s, 1);
+        channel = check_static_channel(channel_name);
     }
 
-    int channel_id = lua_tointeger(s, 1);
-    BSPD_CHANNEL *channel = check_channel(channel_id);
     if (!channel || !channel->list)
     {
         lua_pushnil(s);
@@ -310,7 +313,7 @@ static int standard_reg_session(lua_State *s)
 
     BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
     // Check previous logged session
-    BSPD_SESSION *old_session = check_session(session_id);
+    BSPD_SESSION *old_session = check_logged_session(session_id);
     if (old_session)
     {
         if (session != old_session)
@@ -329,7 +332,7 @@ static int standard_reg_session(lua_State *s)
             bind_session(clt, session);
         }
 
-        set_session(session, session_id);
+        set_session_id(session, session_id);
         logon_session(session);
         lua_pushlightuserdata(s, (void *) session);
     }
@@ -353,7 +356,7 @@ static int standard_unreg_session(lua_State *s)
     if (lua_isstring(s, -1))
     {
         const char *session_id = lua_tostring(s, -1);
-        session = check_session(session_id);
+        session = check_logged_session(session_id);
     }
     else if (lua_isnumber(s, -1))
     {
@@ -417,14 +420,33 @@ static int standard_new_channel(lua_State *s)
         return 0;
     }
 
-    int channel_id = new_channel(BSPD_CHANNEL_DYNAMIC);
-    if (channel_id > 0)
+    BSPD_CHANNEL *channel = NULL;
+    const char *name = lua_tostring(s, -1);
+    if (name)
     {
-        lua_pushnumber(s, channel_id);
+        // Static
+        channel = new_channel(name);
+        if (channel)
+        {
+            lua_pushstring(s, name);
+        }
+        else
+        {
+            lua_pushnil(s);
+        }
     }
     else
     {
-        lua_pushnil(s);
+        // Dynamic
+        channel = new_channel(NULL);
+        if (channel)
+        {
+            lua_pushnumber(s, channel->id);
+        }
+        else
+        {
+            lua_pushnil(s);
+        }
     }
 
     return 1;
@@ -442,8 +464,19 @@ static int standard_del_channel(lua_State *s)
         return 0;
     }
 
-    int channel_id = lua_tointeger(s, -1);
-    del_channel(channel_id);
+    BSPD_CHANNEL *channel = NULL;
+    if (lua_isnumber(s, 1))
+    {
+        int channel_id = lua_tointeger(s, 1);
+        channel = check_dynamic_channel(channel_id);
+    }
+    else if (lua_isstring(s, 1))
+    {
+        const char *channel_name = lua_tostring(s, 1);
+        channel = check_static_channel(channel_name);
+    }
+
+    del_channel(channel);
 
     return 0;
 }
@@ -460,7 +493,7 @@ static int standard_join_channel(lua_State *s)
         return 0;
     }
 
-    if (!lua_isstring(s, -1) || !lua_isnumber(s, -2))
+    if (!lua_isstring(s, -1) || (!lua_isnumber(s, -2) && !lua_isstring(s, -2)))
     {
         lua_pushboolean(s, BSP_FALSE);
 
@@ -468,11 +501,19 @@ static int standard_join_channel(lua_State *s)
     }
 
     const char *session_id = lua_tostring(s, -1);
-    int channel_id = lua_tointeger(s, -2);
-    BSPD_SESSION *session = check_session(session_id);
-    BSPD_CHANNEL *channel = check_channel(channel_id);
-
-    if (BSP_RTN_SUCCESS == add_session_to_channel(channel, session))
+    BSPD_CHANNEL *channel = NULL;
+    if (lua_isnumber(s, -2))
+    {
+        int channel_id = lua_tointeger(s, -2);
+        channel = check_dynamic_channel(channel_id);
+    }
+    else if (lua_isstring(s, -2))
+    {
+        const char *channel_name = lua_tostring(s, -2);
+        channel = check_static_channel(channel_name);
+    }
+    BSPD_SESSION *session = check_logged_session(session_id);
+    if (BSP_RTN_SUCCESS == join_channel(channel, session))
     {
         lua_pushboolean(s, BSP_TRUE);
     }
@@ -484,7 +525,7 @@ static int standard_join_channel(lua_State *s)
     return 1;
 }
 
-static int standard_leave_channel(lua_State *s)
+static int standard_quit_channel(lua_State *s)
 {
     if (!s)
     {
@@ -496,7 +537,7 @@ static int standard_leave_channel(lua_State *s)
         return 0;
     }
 
-    if (!lua_isstring(s, -1) || !lua_isnumber(s, -2))
+    if (!lua_isstring(s, -1) || (!lua_isnumber(s, -2) && !lua_isstring(s, -2)))
     {
         lua_pushboolean(s, BSP_FALSE);
 
@@ -504,11 +545,20 @@ static int standard_leave_channel(lua_State *s)
     }
 
     const char *session_id = lua_tostring(s, -1);
-    int channel_id = lua_tointeger(s, -2);
-    BSPD_SESSION *session = check_session(session_id);
-    BSPD_CHANNEL *channel = check_channel(channel_id);
+    BSPD_CHANNEL *channel = NULL;
+    if (lua_isnumber(s, -2))
+    {
+        int channel_id = lua_tointeger(s, -2);
+        channel = check_dynamic_channel(channel_id);
+    }
+    else if (lua_isstring(s, -2))
+    {
+        const char *channel_name = lua_tostring(s, -2);
+        channel = check_static_channel(channel_name);
+    }
+    BSPD_SESSION *session = check_logged_session(session_id);
 
-    if (BSP_RTN_SUCCESS == remove_session_from_channel(channel, session))
+    if (BSP_RTN_SUCCESS == quit_channel(channel, session))
     {
         lua_pushboolean(s, BSP_TRUE);
     }
@@ -532,8 +582,17 @@ static int standard_list_channel(lua_State *s)
         return 0;
     }
 
-    int channel_id = lua_tointeger(s, -1);
-    BSPD_CHANNEL *channel = check_channel(channel_id);
+    BSPD_CHANNEL *channel = NULL;
+    if (lua_isnumber(s, 1))
+    {
+        int channel_id = lua_tointeger(s, 1);
+        channel = check_dynamic_channel(channel_id);
+    }
+    else if (lua_isstring(s, 1))
+    {
+        const char *channel_name = lua_tostring(s, 1);
+        channel = check_static_channel(channel_name);
+    }
 
     if (channel && channel->list && BSP_OBJECT_HASH == channel->list->type)
     {
@@ -564,50 +623,6 @@ static int standard_list_channel(lua_State *s)
     {
         lua_pushnil(s);
     }
-
-    return 1;
-}
-
-static int standard_check_channel(lua_State *s)
-{
-    if (!s)
-    {
-        return 0;
-    }
-
-    if (!lua_checkstack(s, 1))
-    {
-        return 0;
-    }
-
-    const char *session_id = lua_tostring(s, -1);
-    if (!session_id)
-    {
-        lua_pushnil(s);
-
-        return 1;
-    }
-
-    BSPD_SESSION *session = check_session(session_id);
-    if (!session)
-    {
-        lua_pushnil(s);
-
-        return 1;
-    }
-
-    lua_newtable(s);
-    lua_pushstring(s, "global");
-    lua_pushinteger(s, 0);
-    lua_settable(s, -3);
-
-    lua_pushstring(s, "static");
-    lua_pushinteger(s, session->static_channel);
-    lua_settable(s, -3);
-
-    lua_pushstring(s, "dynamic");
-    lua_pushinteger(s, session->dynamic_channel);
-    lua_settable(s, -3);
 
     return 1;
 }
@@ -747,14 +762,11 @@ int module_standard(lua_State *s)
     lua_pushcfunction(s, standard_join_channel);
     lua_setglobal(s, "bsp_join_channel");
 
-    lua_pushcfunction(s, standard_leave_channel);
-    lua_setglobal(s, "bsp_leave_channel");
+    lua_pushcfunction(s, standard_quit_channel);
+    lua_setglobal(s, "bsp_quit_channel");
 
     lua_pushcfunction(s, standard_list_channel);
     lua_setglobal(s, "bsp_list_channel");
-
-    lua_pushcfunction(s, standard_check_channel);
-    lua_setglobal(s, "bsp_check_channel");
 
     lua_pushcfunction(s, standard_new_timer);
     lua_setglobal(s, "bsp_new_timer");

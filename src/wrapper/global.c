@@ -48,12 +48,8 @@ static int _global_init()
     bsp_spin_lock(&base_lock);
     if (!base_object)
     {
-        base_object = bsp_new_object();
-        if (base_object)
-        {
-            base_object->type = BSP_OBJECT_HASH;
-        }
-        else
+        base_object = bsp_new_object(BSP_OBJECT_HASH);
+        if (!base_object)
         {
             bsp_spin_unlock(&base_lock);
 
@@ -106,7 +102,7 @@ static int global_set(lua_State *s)
 
             if (!val)
             {
-                new_obj = bsp_new_object();
+                new_obj = bsp_new_object(BSP_OBJECT_HASH);
                 if (!new_obj)
                 {
                     bsp_spin_unlock(&base_lock);
@@ -116,7 +112,6 @@ static int global_set(lua_State *s)
                     return 1; 
                 }
 
-                new_obj->type = BSP_OBJECT_HASH;
                 val = bsp_new_value();
                 if (!val)
                 {
@@ -257,8 +252,7 @@ static int global_get(lua_State *s)
                 return 1;
             }
 
-            obj = bsp_new_object();
-            obj->type = BSP_OBJECT_SINGLE;
+            obj = bsp_new_object(BSP_OBJECT_SINGLE);
             bsp_object_set_single(obj, val);
             object_to_lua(s, obj);
             obj->type = BSP_OBJECT_UNDETERMINED;

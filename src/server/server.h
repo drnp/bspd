@@ -168,6 +168,29 @@ typedef enum bspd_server_event_hook_e
 #define BSPD_SERVER_EVENT_ON_PACKET_CMD BSPD_SERVER_EVENT_ON_PACKET_CMD
 } BSPD_SERVER_EVENT;
 
+// Channel type
+typedef enum bspd_channel_type_e
+{
+    BSPD_CHANNEL_ALL    = 0, 
+#define BSPD_CHANNEL_ALL                BSPD_CHANNEL_ALL
+    BSPD_CHANNEL_GLOBAL = 1, 
+#define BSPD_CHANNEL_GLOBAL             BSPD_CHANNEL_GLOBAL
+    BSPD_CHANNEL_STATIC = 2, 
+#define BSPD_CHANNEL_STATIC             BSPD_CHANNEL_STATIC
+    BSPD_CHANNEL_DYNAMIC
+                        = 3
+#define BSPD_CHANNEL_DYNAMIC            BSPD_CHANNEL_DYNAMIC
+} BSPD_CHANNEL_TYPE;
+
+// Channel
+typedef struct bspd_channel_t
+{
+    int                 id;
+    char                name[MAX_CHANNEL_NAME_LENGTH];
+    BSPD_CHANNEL_TYPE   type;
+    BSP_OBJECT          *list;
+} BSPD_CHANNEL;
+
 // Session struct
 typedef struct bspd_session_t
 {
@@ -181,29 +204,10 @@ typedef struct bspd_session_t
     BSP_SOCKET_CLIENT   *bind;
     BSP_BOOLEAN         logged;
     BSP_BOOLEAN         reported;
-    int                 static_channel;
-    int                 dynamic_channel;
+    BSPD_CHANNEL        **joined_list;
+    size_t              joined_list_size;
+    size_t              total_joined;
 } BSPD_SESSION;
-
-// Channel type
-typedef enum bspd_channel_type_e
-{
-    BSPD_CHANNEL_ALL    = 0, 
-#define BSPD_CHANNEL_ALL                BSPD_CHANNEL_ALL
-    BSPD_CHANNEL_STATIC = 1, 
-#define BSPD_CHANNEL_STATIC             BSPD_CHANNEL_STATIC
-    BSPD_CHANNEL_DYNAMIC
-                        = 2, 
-#define BSPD_CHANNEL_DYNAMIC            BSPD_CHANNEL_DYNAMIC
-} BSPD_CHANNEL_TYPE;
-
-// Channel
-typedef struct bspd_channel_t
-{
-    int                 id;
-    BSPD_CHANNEL_TYPE   type;
-    BSP_OBJECT          *list;
-} BSPD_CHANNEL;
 
 typedef struct bspd_server_prop_t
 {
@@ -325,18 +329,19 @@ int unreg_client(BSP_SOCKET_CLIENT *clt);
 BSP_SOCKET_CLIENT * check_client(int fd);
 
 BSPD_SESSION * new_session();
-int set_session(BSPD_SESSION *session, const char *session_id);
+int set_session_id(BSPD_SESSION *session, const char *session_id);
 int del_session(BSPD_SESSION *session);
-BSPD_SESSION * check_session(const char *session_id);
+BSPD_SESSION * check_logged_session(const char *session_id);
 int bind_session(BSP_SOCKET_CLIENT *clt, BSPD_SESSION *session);
 int logon_session(BSPD_SESSION *session);
 int logoff_session(BSPD_SESSION *session);
 
-int new_channel(BSPD_CHANNEL_TYPE type);
-int del_channel(int channel_id);
-BSPD_CHANNEL * check_channel(int channel_id);
-int add_session_to_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
-int remove_session_from_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
+BSPD_CHANNEL * new_channel(const char *name);
+int del_channel(BSPD_CHANNEL *channel);
+BSPD_CHANNEL * check_static_channel(const char *name);
+BSPD_CHANNEL * check_dynamic_channel(int id);
+int join_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
+int quit_channel(BSPD_CHANNEL *channel, BSPD_SESSION *session);
 
 /* Send actions */
 size_t send_string(BSP_SOCKET_CLIENT *clt, BSP_STRING *str);

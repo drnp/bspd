@@ -46,10 +46,14 @@
 #include "bsp.h"
 
 #define MAX_SESSION_ID_LENGTH           64
-#define CLIENT_LIST_INITIAL             65536
-#define CHANNEL_LIST_INITIAL            4096
+#define MAX_CHANNEL_NAME_LENGTH         64
+#define DYNAMIC_CHANNEL_LIST_INITIAL    4096
+#define SESSION_JOINED_LIST_INITIAL     64
 
 #define LOG_FILENAME                    "bspd.log"
+
+#define BSPD_FD_ADD_CLT                 0
+#define BSPD_FD_ADD_SESSION             1
 
 #include "serialization/serialization.h"
 #include "server/server.h"

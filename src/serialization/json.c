@@ -410,8 +410,7 @@ static BSP_VALUE * _get_value_from_json(BSP_STRING *json)
             else if ('{' == c)
             {
                 // A new hash
-                v_obj = bsp_new_object();
-                v_obj->type = BSP_OBJECT_HASH;
+                v_obj = bsp_new_object(BSP_OBJECT_HASH);
                 STR_NEXT(json);
                 _traverse_json_hash(json, v_obj);
                 ret = bsp_new_value();
@@ -429,8 +428,7 @@ static BSP_VALUE * _get_value_from_json(BSP_STRING *json)
             else if ('[' == c)
             {
                 // A new array
-                v_obj = bsp_new_object();
-                v_obj->type = BSP_OBJECT_ARRAY;
+                v_obj = bsp_new_object(BSP_OBJECT_ARRAY);
                 STR_NEXT(json);
                 _traverse_json_array(json, v_obj);
                 ret = bsp_new_value();
@@ -630,7 +628,7 @@ BSP_OBJECT * json_nd_decode(BSP_STRING *json)
             else
             {
                 // Single
-                obj = bsp_new_object();
+                obj = bsp_new_object(BSP_OBJECT_SINGLE);
                 obj->type = BSP_OBJECT_SINGLE;
                 bsp_object_set_single(obj, first);
             }
