@@ -512,6 +512,7 @@ static int standard_join_channel(lua_State *s)
         const char *channel_name = lua_tostring(s, -2);
         channel = check_static_channel(channel_name);
     }
+
     BSPD_SESSION *session = check_logged_session(session_id);
     if (BSP_RTN_SUCCESS == join_channel(channel, session))
     {

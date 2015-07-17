@@ -68,6 +68,11 @@ static void _worker_on_poke(BSP_THREAD *t)
     {
         BSPD_SCRIPT *scrt = (BSPD_SCRIPT *) t->additional;
         call_script(scrt, task);
+        if (task->follow_up)
+        {
+            task->follow_up(task->arg);
+        }
+
         del_script_task(task);
     }
 
@@ -322,7 +327,7 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;
-        task->ptr = NULL;
+        //task->ptr = NULL;
         task->func = prop->lua_hook_connect;
         push_script_task(task);
     }
@@ -332,6 +337,14 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
     return BSP_RTN_SUCCESS;
 }
 
+static void _after_disconnect_task(void *arg)
+{
+    BSP_SOCKET_CLIENT *clt = (BSP_SOCKET_CLIENT *) arg;
+    unreg_client(clt);
+
+    return;
+}
+
 static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
 {
     if (!clt)
@@ -339,19 +352,18 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
         return BSP_RTN_INVALID;
     }
 
-    BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
     {
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
         BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
         task->clt = clt->sck.fd;
-        task->ptr = (session) ? session->session_id : NULL;
+        //task->ptr = (session) ? session->session_id : NULL;
         task->func = prop->lua_hook_disconnect;
+        task->follow_up = _after_disconnect_task;
+        task->arg = (void *) clt;
         push_script_task(task);
     }
-
-    unreg_client(clt);
 
     return BSP_RTN_SUCCESS;
 }
@@ -779,7 +791,6 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
         default : 
             break;
     }
-
 /*
     switch (session->compress_type)
     {
@@ -794,7 +805,6 @@ size_t send_command(BSP_SOCKET_CLIENT *clt, int command, BSP_OBJECT *params)
             break;
     }
 */
-    //debug_hex(STR_STR(data), STR_LEN(data));
     unsigned char hdr = BSPD_PACKET_CMD << 6 | (session->compress_type) << 1;
     ret = _real_send(clt, hdr, data);
     bsp_del_string(data);

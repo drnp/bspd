@@ -210,6 +210,7 @@ int load_script_content(BSPD_SCRIPT *scrt, BSP_STRING *script)
             {
                 bsp_trace_message(BSP_TRACE_ERROR, "lua", "Run script chunk error : %s", lua_tostring(scrt->state, -1));
             }
+
             ret = BSP_RTN_SUCCESS;
             break;
         case LUA_ERRSYNTAX : 
@@ -617,8 +618,8 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     {
         case BSPD_TASK_CTL : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            lua_pushstring(scrt->state, (const char *) task->ptr);
-            nargs = 2;
+            //lua_pushstring(scrt->state, (const char *) task->ptr);
+            nargs = 1;
             break;
         case BSPD_TASK_RAW : 
         case BSPD_TASK_STREAM : 

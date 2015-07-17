@@ -289,6 +289,8 @@ typedef struct bspd_script_task_t
     int                 clt;
     int                 cmd;
     void                *ptr;
+    void                (*follow_up)(void *arg);
+    void                *arg;
     struct bspd_script_task_t
                         *next;
 } BSPD_SCRIPT_TASK;
