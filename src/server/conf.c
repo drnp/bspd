@@ -74,6 +74,8 @@ static struct bspd_server_t * _parse_conf_server(BSP_OBJECT *desc)
     ret->port = 0;
     ret->prop.type = BSPD_SERVER_NORMAL;
     ret->prop.data_type = BSPD_DATA_RAW;
+    ret->prop.debug_input = BSP_FALSE;
+    ret->prop.debug_output = BSP_FALSE;
 
     BSP_STRING *str = NULL;
     BSP_VALUE *node = NULL;
@@ -191,6 +193,25 @@ static struct bspd_server_t * _parse_conf_server(BSP_OBJECT *desc)
             {
                 ret->prop.data_type = BSPD_DATA_PACKET;
             }
+        }
+    }
+
+    // Debug
+    node = bsp_object_value_hash_original(desc, "debug_input");
+    if (node)
+    {
+        if (BSP_FALSE == ret->prop.debug_input)
+        {
+            ret->prop.debug_input = V_GET_BOOLEAN(node);
+        }
+    }
+
+    node = bsp_object_value_hash_original(desc, "debug_output");
+    if (node)
+    {
+        if (BSP_FALSE == ret->prop.debug_output)
+        {
+            ret->prop.debug_output = V_GET_BOOLEAN(node);
         }
     }
 

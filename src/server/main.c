@@ -395,6 +395,11 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
         return len;
     }
 
+    if (prop->debug_input)
+    {
+        debug_hex(data, len);
+    }
+
     size_t (*barer)(BSPD_BARED *bared, const char *data, size_t len) = NULL;
     switch (prop->type)
     {
@@ -542,6 +547,13 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
 
         if (!packer)
         {
+            if (BSP_TRUE == prop->debug_output)
+            {
+                debug_hex((const char *) &hdr, sizeof(unsigned char));
+                debug_hex((const char *) len_str, 4);
+                debug_hex(STR_STR(data), STR_LEN(data));
+            }
+
             ret = bsp_socket_append(&clt->sck, (const char *) &hdr, sizeof(unsigned char));
             ret += bsp_socket_append(&clt->sck, (const char *) len_str, 4);
             ret += bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
@@ -561,6 +573,11 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
                     packer(packed, STR_STR(src), STR_LEN(src));
                     if (packed->data)
                     {
+                        if (BSP_TRUE == prop->debug_output)
+                        {
+                            debug_hex(STR_STR(packed->data), STR_LEN(packed->data));
+                        }
+
                         ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
                         bsp_del_string(packed->data);
                     }
@@ -577,6 +594,11 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
         // Raw
         if (!packer)
         {
+            if (BSP_TRUE == prop->debug_output)
+            {
+                debug_hex(STR_STR(data), STR_LEN(data));
+            }
+
             ret = bsp_socket_append(&clt->sck, STR_STR(data), STR_LEN(data));
         }
         else
@@ -587,6 +609,11 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
                 packer(packed, STR_STR(data), STR_LEN(data));
                 if (packed->data)
                 {
+                    if (BSP_TRUE == prop->debug_output)
+                    {
+                        debug_hex(STR_STR(packed->data), STR_LEN(packed->data));
+                    }
+
                     ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
                     bsp_del_string(packed->data);
                 }

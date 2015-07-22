@@ -213,6 +213,8 @@ typedef struct bspd_server_prop_t
 {
     BSPD_SERVER_TYPE    type;
     BSPD_DATA_TYPE      data_type;
+    BSP_BOOLEAN         debug_input;
+    BSP_BOOLEAN         debug_output;
     void                (*event_hook)(BSPD_SERVER_EVENT event, BSP_OBJECT *proto, void *data);
     const char          *lua_hook_connect;
     const char          *lua_hook_disconnect;
