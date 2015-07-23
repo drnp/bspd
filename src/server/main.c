@@ -322,6 +322,7 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
     }
 
     BSP_SOCKET_SERVER *srv = clt->connected_server;
+    reg_client(clt);
     if (srv)
     {
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
@@ -331,8 +332,6 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
         task->func = prop->lua_hook_connect;
         push_script_task(task);
     }
-
-    reg_client(clt);
 
     return BSP_RTN_SUCCESS;
 }
