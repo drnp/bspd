@@ -103,13 +103,14 @@ int reg_client(BSP_SOCKET_CLIENT *clt)
         return BSP_RTN_INVALID;
     }
 
+    /*
     int fd = clt->sck.fd;
     BSP_FD *f = bsp_get_fd(fd, BSP_FD_SOCKET_CLIENT);
     if (f)
     {
         FD_ADD_SET(f, BSPD_FD_ADD_CLT, (void *) clt);
     }
-
+    */
     BSPD_SESSION *session = new_session();
     bind_session(clt, session);
 
@@ -123,12 +124,14 @@ int unreg_client(BSP_SOCKET_CLIENT *clt)
         return BSP_RTN_INVALID;
     }
 
+    /*
     int fd = clt->sck.fd;
     BSP_FD *f = bsp_get_fd(fd, BSP_FD_SOCKET_CLIENT);
     if (f)
     {
         FD_ADD_SET(f, BSPD_FD_ADD_CLT, NULL);
     }
+    */
 
     BSPD_SESSION *session = (BSPD_SESSION *) clt->additional;
     if (session && BSP_FALSE == session->logged)
@@ -145,7 +148,7 @@ BSP_SOCKET_CLIENT * check_client(int fd)
     BSP_FD *f = bsp_get_fd(fd, BSP_FD_SOCKET_CLIENT_TCP | BSP_FD_SOCKET_CLIENT_UDP | BSP_FD_SOCKET_CLIENT_SCTP | BSP_FD_SOCKET_CLIENT_LOCAL);
     if (f)
     {
-        return (BSP_SOCKET_CLIENT *) (FD_ADD_GET(f, BSPD_FD_ADD_CLT));
+        return (BSP_SOCKET_CLIENT *) (FD_PTR(f));
     }
 
     return NULL;
