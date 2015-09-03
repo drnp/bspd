@@ -67,10 +67,22 @@ static void _worker_on_poke(BSP_THREAD *t)
     if (task)
     {
         BSPD_SCRIPT *scrt = (BSPD_SCRIPT *) t->additional;
-        call_script(scrt, task);
-        if (task->follow_up)
+        switch (task->type)
         {
-            task->follow_up(task->arg);
+            case BSPD_SCRIPT_TASK_GC : 
+                lua_gc(scrt->state, LUA_GCCOLLECT, 0);
+                break;
+            case BSPD_SCRIPT_TASK_RELOAD : 
+                break;
+            case BSPD_SCRIPT_TASK_RESTART : 
+                break;
+            default : 
+                call_script(scrt, task);
+                if (task->follow_up)
+                {
+                    task->follow_up(task->arg);
+                }
+                break;
         }
 
         del_script_task(task);
@@ -81,7 +93,7 @@ static void _worker_on_poke(BSP_THREAD *t)
 
 static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt, const char *hook)
 {
-    BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_RAW);
+    BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_RAW);
     if (task)
     {
         BSP_STRING *str = bsp_new_string(STR_STR(bared->data), STR_LEN(bared->data));
@@ -210,7 +222,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
         switch (p_type)
         {
             case BSPD_PACKET_STR : 
-                task = new_script_task(BSPD_TASK_STREAM);
+                task = new_script_task(BSPD_SCRIPT_TASK_STREAM);
                 if (task)
                 {
                     data = bsp_new_string(input + 5, plen);
@@ -223,7 +235,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
                 ret = 5 + plen;
                 break;
             case BSPD_PACKET_OBJ : 
-                task = new_script_task(BSPD_TASK_OBJECT);
+                task = new_script_task(BSPD_SCRIPT_TASK_OBJECT);
                 if (task)
                 {
                     data = bsp_new_const_string(input + 5, plen);
@@ -268,7 +280,7 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
 
                 value.type = BSP_VALUE_INT32;
                 bsp_get_value(input + 5, &value, BSP_BIG_ENDIAN);
-                task = new_script_task(BSPD_TASK_COMMAND);
+                task = new_script_task(BSPD_SCRIPT_TASK_COMMAND);
                 if (task)
                 {
                     data = bsp_new_const_string(input + 9, plen - 4);
@@ -326,11 +338,14 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
     if (srv)
     {
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
-        BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
-        task->clt = clt->sck.fd;
-        //task->ptr = NULL;
-        task->func = prop->lua_hook_connect;
-        push_script_task(task);
+        if (prop->lua_hook_connect)
+        {
+            BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_CTL);
+            task->clt = clt->sck.fd;
+            //task->ptr = NULL;
+            task->func = prop->lua_hook_connect;
+            push_script_task(task);
+        }
     }
 
     return BSP_RTN_SUCCESS;
@@ -355,13 +370,16 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
     if (srv)
     {
         BSPD_SERVER_PROP *prop = (BSPD_SERVER_PROP *) srv->additional;
-        BSPD_SCRIPT_TASK *task = new_script_task(BSPD_TASK_CTL);
-        task->clt = clt->sck.fd;
-        //task->ptr = (session) ? session->session_id : NULL;
-        task->func = prop->lua_hook_disconnect;
-        task->follow_up = _after_disconnect_task;
-        task->arg = (void *) clt;
-        push_script_task(task);
+        if (prop->lua_hook_disconnect)
+        {
+            BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_CTL);
+            task->clt = clt->sck.fd;
+            //task->ptr = (session) ? session->session_id : NULL;
+            task->func = prop->lua_hook_disconnect;
+            task->follow_up = _after_disconnect_task;
+            task->arg = (void *) clt;
+            push_script_task(task);
+        }
     }
 
     return BSP_RTN_SUCCESS;
@@ -370,6 +388,12 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
 static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len)
 {
     if (!clt || !data || !len)
+    {
+        return 0;
+    }
+
+    BSP_FD *f = bsp_get_fd(clt->sck.fd, BSP_FD_SOCKET_CLIENT);
+    if (!f)
     {
         return 0;
     }
@@ -400,7 +424,12 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
         debug_hex(data, len);
         fprintf(stderr, "=== Data input ===\n");
     }
-
+/*
+    if (!prop->lua_hook_data)
+    {
+        return len;
+    }
+*/
     size_t (*barer)(BSPD_BARED *bared, const char *data, size_t len) = NULL;
     switch (prop->type)
     {
@@ -426,11 +455,16 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
     BSPD_BARED *bared = NULL;
     while (len > offset)
     {
-        bared = bsp_mempool_alloc(mp_bared);
+        bared = (BSPD_BARED *) FD_ADD_GET(f, BSPD_FD_ADD_BARED);
+        if (!bared)
+        {
+            bared = bsp_mempool_alloc(mp_bared);
+        }
+
         if (bared)
         {
             barer(bared, data + offset, len - offset);
-            if (bared->data)
+            if (bared->data && prop->lua_hook_data)
             {
                 if (BSPD_DATA_PACKET == prop->data_type)
                 {
@@ -930,7 +964,7 @@ static void _on_base_clock(BSP_TIMER *tmr)
     }
 
     BSP_THREAD *t;
-    BSPD_SCRIPT *scrt;
+    //BSPD_SCRIPT *scrt = NULL;
     BSPD_CONFIG *c = get_global_config();
     if (0 == (tmr->count & 0xFF))
     {
@@ -939,9 +973,10 @@ static void _on_base_clock(BSP_TIMER *tmr)
         t = bsp_get_thread(BSP_THREAD_WORKER, i);
         if (t)
         {
-            scrt = (BSPD_SCRIPT *) t->additional;
+            //scrt = (BSPD_SCRIPT *) t->additional;
             bsp_trace_message(BSP_TRACE_NOTICE, "bspd", "Try to run gabbage collection on script %d", i);
-            lua_gc(scrt->state, LUA_GCCOLLECT, 0);
+            BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_GC);
+            push_script_task(task);
         }
     }
 
@@ -957,6 +992,16 @@ int bspd_startup()
         BSP_RTN_SUCCESS != clients_init())
     {
         fprintf(stderr, "Application error\n");
+
+        exit(BSP_RTN_ERR_MEMORY);
+    }
+
+    if (BSP_RTN_SUCCESS != proto_normal_init() || 
+        BSP_RTN_SUCCESS != proto_internal_init() || 
+        BSP_RTN_SUCCESS != proto_http_init() || 
+        BSP_RTN_SUCCESS != proto_websocket_init())
+    {
+        fprintf(stderr, "Proto error\n");
 
         exit(BSP_RTN_ERR_MEMORY);
     }

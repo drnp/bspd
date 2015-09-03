@@ -145,7 +145,7 @@ int unreg_client(BSP_SOCKET_CLIENT *clt)
 
 BSP_SOCKET_CLIENT * check_client(int fd)
 {
-    BSP_FD *f = bsp_get_fd(fd, BSP_FD_SOCKET_CLIENT_TCP | BSP_FD_SOCKET_CLIENT_UDP | BSP_FD_SOCKET_CLIENT_SCTP | BSP_FD_SOCKET_CLIENT_LOCAL);
+    BSP_FD *f = bsp_get_fd(fd, BSP_FD_SOCKET_CLIENT);
     if (f)
     {
         return (BSP_SOCKET_CLIENT *) (FD_PTR(f));

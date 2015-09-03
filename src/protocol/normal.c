@@ -40,6 +40,11 @@
 
 #include "../bspd.h"
 
+int proto_normal_init()
+{
+    return BSP_RTN_SUCCESS;
+}
+
 size_t normal_bare_data(BSPD_BARED *bared, const char *data, size_t len)
 {
     // We do nothing on normal transmission, so just unpack it

@@ -54,6 +54,7 @@
 
 #define BSPD_FD_ADD_CLT                 0
 #define BSPD_FD_ADD_SESSION             1
+#define BSPD_FD_ADD_BARED               2
 
 #include "serialization/serialization.h"
 #include "server/server.h"

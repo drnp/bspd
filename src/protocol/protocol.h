@@ -41,24 +41,80 @@
 #ifndef _PROTOCOL_H
 
 #define _PROTOCOL_H
+/* HTTP */
+#define HTTP_VERSION_09                 9
+#define HTTP_VERSION_10                 10000
+#define HTTP_VERSION_11                 10001
+#define HTTP_VERSION_20                 20000
+#define HTTP_VERSION_UNKNOWN            0
+
+typedef enum bspd_http_request_method_e
+{
+    BSPD_HTTP_METHOD_UNKNOWN
+                        = 0, 
+#define BSPD_HTTP_METHOD_UNKNOWN        BSPD_HTTP_METHOD_UNKNOWN
+    BSPD_HTTP_METHOD_OPTIONS
+                        = 1, 
+#define BSPD_HTTP_METHOD_OPTIONS        BSPD_HTTP_METHOD_OPTIONS
+    BSPD_HTTP_METHOD_GET
+                        = 2, 
+#define BSPD_HTTP_METHOD_GET            BSPD_HTTP_METHOD_GET
+    BSPD_HTTP_METHOD_HEAD
+                        = 4, 
+#define BSPD_HTTP_METHOD_HEAD           BSPD_HTTP_METHOD_HEAD
+    BSPD_HTTP_METHOD_POST
+                        = 8, 
+#define BSPD_HTTP_METHOD_POST           BSPD_HTTP_METHOD_POST
+    BSPD_HTTP_METHOD_PUT
+                        = 16, 
+#define BSPD_HTTP_METHOD_PUT            BSPD_HTTP_METHOD_PUT
+    BSPD_HTTP_METHOD_DELETE
+                        = 32, 
+#define BSPD_HTTP_METHOD_DELETE         BSPD_HTTP_METHOD_DELETE
+    BSPD_HTTP_METHOD_TRACE
+                        = 64, 
+#define BSPD_HTTP_METHOD_TRACE          BSPD_HTTP_METHOD_TRACE
+    BSPD_HTTP_METHOD_CONNECT
+                        = 128
+#define BSPD_HTTP_METHOD_CONNECT        BSPD_HTTP_METHOD_CONNECT
+} BSPD_HTTP_REQUEST_METHOD;
+
 typedef struct bspd_http_request_t
 {
+    int                 version;
+    BSPD_HTTP_REQUEST_METHOD
+                        method;
+    BSP_STRING          *request_uri;
+
+    char                *host;
+    int                 port;
+    char                *referer;
+    char                *user_agent;
+    char                *accept;
+
+    char                *cookie;
+    BSP_OBJECT          *params;
+    BSP_STRING          *raw_post_data;
 } BSPD_HTTP_REQUEST;
 
 // Internal server
+int proto_internal_init();
 size_t internal_bare_data(BSPD_BARED *bared, const char *data, size_t len);
 size_t internal_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 
 // Normal server
+int proto_normal_init();
 size_t normal_bare_data(BSPD_BARED *bared, const char *data, size_t len);
 size_t normal_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 void normal_on_event(BSPD_SERVER_EVENT ev, BSP_OBJECT *protp, void *data);
 
 // Http server
+int proto_http_init();
 size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len);
 size_t http_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 
 // Websocket server
+int proto_websocket_init();
 size_t websocket_bare_data(BSPD_BARED *bared, const char *data, size_t len);
 size_t websocket_pack_data(BSPD_BARED *packed, const char *data, size_t len);
 

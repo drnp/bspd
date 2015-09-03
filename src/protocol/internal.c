@@ -40,6 +40,11 @@
 
 #include "../bspd.h"
 
+int proto_internal_init()
+{
+    return BSP_RTN_SUCCESS;
+}
+
 size_t internal_bare_data(BSPD_BARED *bared, const char *data, size_t len)
 {
     return len;

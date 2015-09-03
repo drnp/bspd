@@ -40,6 +40,11 @@
 
 #include "../bspd.h"
 
+int proto_websocket_init()
+{
+    return BSP_RTN_SUCCESS;
+}
+
 size_t websocket_bare_data(BSPD_BARED *bared, const char *data, size_t len)
 {
     return len;

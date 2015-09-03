@@ -616,13 +616,13 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 
     switch (task->type)
     {
-        case BSPD_TASK_CTL : 
+        case BSPD_SCRIPT_TASK_CTL : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             //lua_pushstring(scrt->state, (const char *) task->ptr);
             nargs = 1;
             break;
-        case BSPD_TASK_RAW : 
-        case BSPD_TASK_STREAM : 
+        case BSPD_SCRIPT_TASK_RAW : 
+        case BSPD_SCRIPT_TASK_STREAM : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             str = (BSP_STRING *) task->ptr;
             if (str)
@@ -636,7 +636,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 
             nargs = 2;
             break;
-        case BSPD_TASK_OBJECT : 
+        case BSPD_SCRIPT_TASK_OBJECT : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             obj = (BSP_OBJECT *) task->ptr;
             if (obj)
@@ -650,7 +650,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 
             nargs = 2;
             break;
-        case BSPD_TASK_COMMAND : 
+        case BSPD_SCRIPT_TASK_COMMAND : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
             lua_pushinteger(scrt->state, task->cmd);
             obj = (BSP_OBJECT *) task->ptr;
@@ -665,7 +665,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
 
             nargs = 3;
             break;
-        case BSPD_TASK_LOAD : 
+        case BSPD_SCRIPT_TASK_LOAD : 
         default : 
             break;
     }
@@ -748,13 +748,13 @@ void del_script_task(BSPD_SCRIPT_TASK *task)
     BSP_OBJECT *obj = NULL;
     switch (task->type)
     {
-        case BSPD_TASK_RAW : 
-        case BSPD_TASK_STREAM : 
+        case BSPD_SCRIPT_TASK_RAW : 
+        case BSPD_SCRIPT_TASK_STREAM : 
             str = (BSP_STRING *) task->ptr;
             bsp_del_string(str);
             break;
-        case BSPD_TASK_OBJECT : 
-        case BSPD_TASK_COMMAND : 
+        case BSPD_SCRIPT_TASK_OBJECT : 
+        case BSPD_SCRIPT_TASK_COMMAND : 
             obj = (BSP_OBJECT *) task->ptr;
             bsp_del_object(obj);
             break;

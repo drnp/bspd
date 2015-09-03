@@ -258,7 +258,7 @@ struct bspd_data_command
 
 typedef struct bspd_bare_data_t
 {
-    BSP_OBJECT          *proto;
+    void                *proto;
     BSP_STRING          *data;
     size_t              proced;
 } BSPD_BARED;
@@ -268,18 +268,32 @@ typedef struct bspd_bare_data_t
 
 typedef enum bspd_script_task_type_e
 {
-    BSPD_TASK_LOAD      = 0, 
-#define BSPD_TASK_LOAD                  BSPD_TASK_LOAD
-    BSPD_TASK_RAW       = 1, 
-#define BSPD_TASK_RAW                   BSPD_TASK_RAW
-    BSPD_TASK_CTL       = 2, 
-#define BSPD_TASK_CTL                   BSPD_TASK_CTL
-    BSPD_TASK_STREAM    = 3, 
-#define BSPD_TASK_STREAM                BSPD_TASK_STREAM
-    BSPD_TASK_OBJECT    = 4, 
-#define BSPD_TASK_OBJECT                BSPD_TASK_OBJECT
-    BSPD_TASK_COMMAND   = 5
-#define BSPD_TASK_COMMAND               BSPD_TASK_COMMAND
+    BSPD_SCRIPT_TASK_LOAD
+                        = 0, 
+#define BSPD_SCRIPT_TASK_LOAD           BSPD_SCRIPT_TASK_LOAD
+    BSPD_SCRIPT_TASK_RAW
+                        = 1, 
+#define BSPD_SCRIPT_TASK_RAW            BSPD_SCRIPT_TASK_RAW
+    BSPD_SCRIPT_TASK_CTL
+                        = 2, 
+#define BSPD_SCRIPT_TASK_CTL            BSPD_SCRIPT_TASK_CTL
+    BSPD_SCRIPT_TASK_STREAM
+                        = 3, 
+#define BSPD_SCRIPT_TASK_STREAM         BSPD_SCRIPT_TASK_STREAM
+    BSPD_SCRIPT_TASK_OBJECT
+                        = 4, 
+#define BSPD_SCRIPT_TASK_OBJECT         BSPD_SCRIPT_TASK_OBJECT
+    BSPD_SCRIPT_TASK_COMMAND
+                        = 5, 
+#define BSPD_SCRIPT_TASK_COMMAND        BSPD_SCRIPT_TASK_COMMAND
+    BSPD_SCRIPT_TASK_GC = 6, 
+#define BSPD_SCRIPT_TASK_GC             BSPD_SCRIPT_TASK_GC
+    BSPD_SCRIPT_TASK_RELOAD
+                        = 7, 
+#define BSPD_SCRIPT_TASK_RELOAD         BSPD_SCRIPT_TASK_RELOAD
+    BSPD_SCRIPT_TASK_RESTART
+                        = 8
+#define BSPD_SCRIPT_TASK_RESTART        BSPD_SCRIPT_TASK_RESTART
 } BSPD_SCRIPT_TASK_TYPE;
 
 typedef struct bspd_script_task_t
