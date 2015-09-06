@@ -42,9 +42,9 @@
 
 static BSP_MEMPOOL *mp_http_request = NULL;
 
-static void _clkean_req(void *ptr)
+static void _clean_req(void *ptr)
 {
-    BSPD_HTTP_REQUEST *req = (BSPD_HTTP_REQUSST *) ptr;
+    BSPD_HTTP_REQUEST *req = (BSPD_HTTP_REQUEST *) ptr;
     if (req)
     {
         if (req->params)
@@ -52,10 +52,10 @@ static void _clkean_req(void *ptr)
             bsp_del_object(req->params);
             req->params = NULL;
         }
-        if (req->post_data)
+        if (req->raw_post_data)
         {
-            bsp_del_string(req->post_data);
-            req->post_data = NULL;
+            bsp_del_string(req->raw_post_data);
+            req->raw_post_data = NULL;
         }
 
         bsp_free(req);
@@ -301,9 +301,8 @@ size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len)
             BSPD_HTTP_REQUEST *req = _parse_http_request(data, len);
             bared->proto = req;
         }
-
-        if 
     }
+
     return len;
 }
 

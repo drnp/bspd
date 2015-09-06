@@ -261,6 +261,7 @@ typedef struct bspd_bare_data_t
     void                *proto;
     BSP_STRING          *data;
     size_t              proced;
+    BSP_BOOLEAN         bared;
 } BSPD_BARED;
 
 // Script
@@ -304,7 +305,8 @@ typedef struct bspd_script_task_t
     int                 ref;
     int                 clt;
     int                 cmd;
-    void                *ptr;
+    BSP_OBJECT          *proto
+    void                *data;
     void                (*follow_up)(void *arg);
     void                *arg;
     struct bspd_script_task_t

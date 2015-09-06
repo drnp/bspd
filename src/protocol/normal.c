@@ -53,6 +53,7 @@ size_t normal_bare_data(BSPD_BARED *bared, const char *data, size_t len)
         bared->data = bsp_new_const_string(data, len);
         bared->proto = NULL;
         bared->proced = len;
+        bared->bared = BSP_TRUE;
     }
 
     return len;

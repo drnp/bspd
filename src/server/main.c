@@ -366,6 +366,18 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
         return BSP_RTN_INVALID;
     }
 
+    BSP_FD *f = bsp_get_fd(clt->sck.fd, BSP_FD_SOCKET_CLIENT);
+    if (f)
+    {
+        BSPD_BARED *bared = FD_ADD_GET(f, BSPD_FD_ADD_BARED);
+        if (bared)
+        {
+            bsp_del_string(bared->data);
+            bsp_del_object(bared->proto);
+            bsp_mempool_free(mp_bared, bared);
+        }
+    }
+
     BSP_SOCKET_SERVER *srv = clt->connected_server;
     if (srv)
     {
@@ -459,13 +471,15 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
         if (!bared)
         {
             bared = bsp_mempool_alloc(mp_bared);
+            FD_ADD_SET(f, BSPD_FD_ADD_BARED, bared);
         }
 
         if (bared)
         {
             barer(bared, data + offset, len - offset);
-            if (bared->data && prop->lua_hook_data)
+            if (BSP_TRUE == bared->bared && prop->lua_hook_data)
             {
+                // Segment bared
                 if (BSPD_DATA_PACKET == prop->data_type)
                 {
                     proced = _proc_packet(bared, clt, prop->lua_hook_data);
@@ -484,16 +498,24 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
                     data_len += proced;
                 }
 
-                offset += STR_LEN(bared->data);
+                offset += bared->proced;
+                bsp_del_string(bared->data);
+                bsp_del_object(bared->proto);
+                bared->bared = BSP_FALSE;
+                bared->data = NULL;
+                bared->proto = NULL;
             }
             else
             {
+                // Next time
                 end = BSP_TRUE;
             }
 
+            /*
             bsp_del_string(bared->data);
             bsp_del_object(bared->proto);
             bsp_mempool_free(mp_bared, bared);
+            */
         }
         else
         {
