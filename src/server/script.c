@@ -624,7 +624,7 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
         case BSPD_SCRIPT_TASK_RAW : 
         case BSPD_SCRIPT_TASK_STREAM : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            str = (BSP_STRING *) task->ptr;
+            str = (BSP_STRING *) task->data;
             if (str)
             {
                 lua_pushlstring(scrt->state, STR_STR(str), STR_LEN(str));
@@ -634,29 +634,9 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
                 lua_pushnil(scrt->state);
             }
 
-            nargs = 2;
-            break;
-        case BSPD_SCRIPT_TASK_OBJECT : 
-            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            obj = (BSP_OBJECT *) task->ptr;
-            if (obj)
+            if (task->proto)
             {
-                object_to_lua(scrt->state, obj);
-            }
-            else
-            {
-                lua_pushnil(scrt->state);
-            }
-
-            nargs = 2;
-            break;
-        case BSPD_SCRIPT_TASK_COMMAND : 
-            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            lua_pushinteger(scrt->state, task->cmd);
-            obj = (BSP_OBJECT *) task->ptr;
-            if (obj)
-            {
-                object_to_lua(scrt->state, obj);
+                object_to_lua(scrt->state, task->proto);
             }
             else
             {
@@ -664,6 +644,53 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
             }
 
             nargs = 3;
+            break;
+        case BSPD_SCRIPT_TASK_OBJECT : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
+            obj = (BSP_OBJECT *) task->data;
+            if (obj)
+            {
+                object_to_lua(scrt->state, obj);
+            }
+            else
+            {
+                lua_pushnil(scrt->state);
+            }
+
+            if (task->proto)
+            {
+                object_to_lua(scrt->state, task->proto);
+            }
+            else
+            {
+                lua_pushnil(scrt->state);
+            }
+
+            nargs = 3;
+            break;
+        case BSPD_SCRIPT_TASK_COMMAND : 
+            lua_pushinteger(scrt->state, (lua_Integer) task->clt);
+            lua_pushinteger(scrt->state, task->cmd);
+            obj = (BSP_OBJECT *) task->data;
+            if (obj)
+            {
+                object_to_lua(scrt->state, obj);
+            }
+            else
+            {
+                lua_pushnil(scrt->state);
+            }
+
+            if (task->proto)
+            {
+                object_to_lua(scrt->state, task->proto);
+            }
+            else
+            {
+                lua_pushnil(scrt->state);
+            }
+
+            nargs = 4;
             break;
         case BSPD_SCRIPT_TASK_LOAD : 
         default : 
@@ -750,18 +777,19 @@ void del_script_task(BSPD_SCRIPT_TASK *task)
     {
         case BSPD_SCRIPT_TASK_RAW : 
         case BSPD_SCRIPT_TASK_STREAM : 
-            str = (BSP_STRING *) task->ptr;
+            str = (BSP_STRING *) task->data;
             bsp_del_string(str);
             break;
         case BSPD_SCRIPT_TASK_OBJECT : 
         case BSPD_SCRIPT_TASK_COMMAND : 
-            obj = (BSP_OBJECT *) task->ptr;
+            obj = (BSP_OBJECT *) task->data;
             bsp_del_object(obj);
             break;
         default : 
             break;
     }
 
+    bsp_del_object(task->proto);
     bsp_mempool_free(mp_task, task);
 
     return;

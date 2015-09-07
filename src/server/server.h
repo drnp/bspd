@@ -305,7 +305,7 @@ typedef struct bspd_script_task_t
     int                 ref;
     int                 clt;
     int                 cmd;
-    BSP_OBJECT          *proto
+    BSP_OBJECT          *proto;
     void                *data;
     void                (*follow_up)(void *arg);
     void                *arg;

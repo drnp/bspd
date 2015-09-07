@@ -98,8 +98,11 @@ static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt,
     {
         BSP_STRING *str = bsp_new_string(STR_STR(bared->data), STR_LEN(bared->data));
         task->clt = clt->sck.fd;
-        task->ptr = (void *) str;
+        task->data = (void *) str;
         task->func = hook;
+        // Move proto to task
+        task->proto = bared->proto;
+        bared->proto = NULL;
         push_script_task(task);
     }
 
@@ -227,8 +230,10 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
                 {
                     data = bsp_new_string(input + 5, plen);
                     task->clt = clt->sck.fd;
-                    task->ptr = (void *) data;
+                    task->data = (void *) data;
                     task->func = hook;
+                    task->proto = bared->proto;
+                    bared->proto = NULL;
                     push_script_task(task);
                 }
 
@@ -264,8 +269,10 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
 
                     bsp_del_string(data);
                     task->clt = clt->sck.fd;
-                    task->ptr = (void *) obj;
+                    task->data = (void *) obj;
                     task->func = hook;
+                    task->proto = bared->proto;
+                    bared->proto = NULL;
                     push_script_task(task);
                 }
 
@@ -310,8 +317,10 @@ static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *c
                     bsp_del_string(data);
                     task->clt = clt->sck.fd;
                     task->cmd = V_GET_INT((&value));
-                    task->ptr = (void *) obj;
+                    task->data = (void *) obj;
                     task->func = hook;
+                    task->proto = bared->proto;
+                    bared->proto = NULL;
                     push_script_task(task);
                 }
 
@@ -342,7 +351,8 @@ static int _bspd_on_connect(BSP_SOCKET_CLIENT *clt)
         {
             BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_CTL);
             task->clt = clt->sck.fd;
-            //task->ptr = NULL;
+            task->data = NULL;
+            task->proto = NULL;
             task->func = prop->lua_hook_connect;
             push_script_task(task);
         }
@@ -386,8 +396,10 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
         {
             BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_CTL);
             task->clt = clt->sck.fd;
-            //task->ptr = (session) ? session->session_id : NULL;
+            //task->data = (session) ? session->session_id : NULL;
+            task->data = NULL;
             task->func = prop->lua_hook_disconnect;
+            task->proto = NULL;
             task->follow_up = _after_disconnect_task;
             task->arg = (void *) clt;
             push_script_task(task);
