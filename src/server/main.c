@@ -93,10 +93,26 @@ static void _worker_on_poke(BSP_THREAD *t)
 
 static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt, const char *hook)
 {
+    if (!bared)
+    {
+        return 0;
+    }
+
+    size_t ret = 0;
+    if (bared->data)
+    {
+        ret = STR_LEN(bared->data);
+    }
+
     BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_RAW);
+    BSP_STRING *str = NULL;
     if (task)
     {
-        BSP_STRING *str = bsp_new_string(STR_STR(bared->data), STR_LEN(bared->data));
+        if (bared->data)
+        {
+            str = bsp_new_string(STR_STR(bared->data), STR_LEN(bared->data));
+        }
+
         task->clt = clt->sck.fd;
         task->data = (void *) str;
         task->func = hook;
@@ -106,11 +122,16 @@ static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt,
         push_script_task(task);
     }
 
-    return STR_LEN(bared->data);
+    return ret;
 }
 
 static ssize_t _proc_packet(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt, const char *hook)
 {
+    if (!bared || !bared->data)
+    {
+        return 0;
+    }
+
     // Parse packet
     size_t len = STR_LEN(bared->data);
     ssize_t ret = len;
@@ -507,7 +528,7 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
                 }
                 else
                 {
-                    data_len += proced;
+                    data_len += bared->proced;
                 }
 
                 offset += bared->proced;
@@ -549,6 +570,12 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
 static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *data)
 {
     if (!clt || !data)
+    {
+        return 0;
+    }
+
+    BSP_FD *f = bsp_get_fd(clt->sck.fd, BSP_FD_SOCKET_CLIENT);
+    if (!f)
     {
         return 0;
     }
@@ -632,9 +659,16 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
         else
         {
             BSP_STRING *src = bsp_new_string(NULL, 1);
+            BSPD_BARED *packed = NULL;
             if (src)
             {
-                BSPD_BARED *packed = bsp_mempool_alloc(mp_bared);
+                packed = (BSPD_BARED *) FD_ADD_GET(f, BSPD_FD_ADD_BARED);
+                if (!packed)
+                {
+                    packed = bsp_mempool_alloc(mp_bared);
+                    FD_ADD_SET(f, BSPD_FD_ADD_BARED, packed);
+                }
+
                 if (packed)
                 {
                     bsp_string_append(src, (const char *) &hdr, sizeof(unsigned char));
@@ -654,8 +688,6 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
                         ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
                         bsp_del_string(packed->data);
                     }
-
-                    bsp_mempool_free(mp_bared, packed);
                 }
 
                 bsp_del_string(src);

@@ -258,8 +258,9 @@ struct bspd_data_command
 
 typedef struct bspd_bare_data_t
 {
-    void                *proto;
+    BSP_OBJECT          *proto;
     BSP_STRING          *data;
+    size_t              expectation;
     size_t              proced;
     BSP_BOOLEAN         bared;
 } BSPD_BARED;

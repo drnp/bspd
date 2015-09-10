@@ -36,6 +36,7 @@ install: install-recursive
 	@mkdir -p $(prefix)/script --mode=0755
 	@mkdir -p $(prefix)/run --mode=0755
 	@cp --backup $(srcdir)/scripts/bspd.runtime.conf.in $(prefix)/etc/bspd.runtime.conf
+	@cp --backup $(srcdir)/scripts/bspd.main.lua $(prefix)/script/bspd.main.lua
 	@echo ""
 	@echo "************************************************************"
 	@echo "*             THANK YOU FOR CHOOSING BS.PLAY               *"

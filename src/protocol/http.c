@@ -40,6 +40,7 @@
 
 #include "../bspd.h"
 
+/*
 static BSP_MEMPOOL *mp_http_request = NULL;
 
 static void _clean_req(void *ptr)
@@ -63,9 +64,10 @@ static void _clean_req(void *ptr)
 
     return;
 }
-
+*/
 int proto_http_init()
 {
+    /*
     if (!mp_http_request)
     {
         mp_http_request = bsp_new_mempool(sizeof(BSPD_HTTP_REQUEST), NULL, _clean_req);
@@ -74,68 +76,81 @@ int proto_http_init()
             return BSP_RTN_ERR_MEMORY;
         }
     }
+    */
 
     return BSP_RTN_SUCCESS;
 }
 
-static void _parse_http_request_line(BSPD_HTTP_REQUEST *req, const char *input, size_t len)
+static void _parse_http_request_line(BSP_OBJECT *req, const char *input, size_t len)
 {
     if (!req || !input)
     {
         return;
     }
 
+    BSP_VALUE *val = NULL;
+    BSP_STRING *str = NULL;
     size_t ml = 0;
     // Check Request-line
     // : METHOD<SP>REQUEST_URI[<CP>VERSION]<CRLF>
     // Request-line must be the first line of HTTP request
     // Request method, case sensitive
+    val = bsp_new_value();
+    if (!val)
+    {
+        return;
+    }
+
     if (0 == strncmp(input, "OPTIONS ", 8))
     {
         ml = 9;
-        req->method = BSPD_HTTP_METHOD_OPTIONS;
+        str = bsp_new_string("OPTIONS", 7);
     }
     else if (0 == strncmp(input, "GET ", 4))
     {
         ml = 4;
-        req->method = BSPD_HTTP_METHOD_GET;
+        str = bsp_new_string("GET", 3);
     }
     else if (0 == strncmp(input, "HEAD ", 5))
     {
         ml = 5;
-        req->method = BSPD_HTTP_METHOD_HEAD;
+        str = bsp_new_string("HEAD", 4);
     }
     else if (0 == strncmp(input, "POST ", 5))
     {
         ml = 5;
-        req->method = BSPD_HTTP_METHOD_POST;
+        str = bsp_new_string("POST", 4);
     }
     else if (0 == strncmp(input, "PUT ", 4))
     {
         ml = 4;
-        req->method = BSPD_HTTP_METHOD_PUT;
+        str = bsp_new_string("PUT", 3);
     }
     else if (0 == strncmp(input, "DELETE ", 7))
     {
         ml = 7;
-        req->method = BSPD_HTTP_METHOD_DELETE;
+        str = bsp_new_string("DELETE", 6);
     }
     else if (0 == strncmp(input, "TRACE ", 6))
     {
         ml = 6;
-        req->method = BSPD_HTTP_METHOD_TRACE;
+        str = bsp_new_string("TRACE", 5);
     }
     else if (0 == strncmp(input, "CONNECT ", 8))
     {
         ml = 8;
-        req->method = BSPD_HTTP_METHOD_CONNECT;
+        str = bsp_new_string("CONNECT", 7);
     }
     else
     {
-        req->method = BSPD_HTTP_METHOD_UNKNOWN;
+        str = bsp_new_string("UNKNOWN", 7);
 
         return;
     }
+
+    V_SET_STRING(val, str);
+    str = bsp_new_string("METHOD", 6);
+    bsp_object_set_hash(req, str, val);
 
     const char *uri_starting = NULL;
     const char *uri_endding = NULL;
@@ -153,9 +168,24 @@ static void _parse_http_request_line(BSPD_HTTP_REQUEST *req, const char *input, 
         }
     }
 
+    val = bsp_new_value();
+    if (!val)
+    {
+        return;
+    }
+
     if (uri_endding)
     {
-        req->request_uri = bsp_new_string(uri_starting, (uri_endding - uri_starting));
+        str = bsp_new_string(uri_starting, (uri_endding - uri_starting));
+        V_SET_STRING(val, str);
+        str = bsp_new_string("REQUEST_URI", 11);
+        bsp_object_set_hash(req, str, val);
+    }
+
+    val = bsp_new_value();
+    if (!val)
+    {
+        return;
     }
 
     const char *version_starting = NULL;
@@ -166,38 +196,48 @@ static void _parse_http_request_line(BSPD_HTTP_REQUEST *req, const char *input, 
             version_starting = input + ml;
             if (0 == strncmp(version_starting, "HTTP/0.9", 8))
             {
-                req->version = HTTP_VERSION_09;
+                str = bsp_new_string("0.9", 3);
             }
             else if (0 == strncmp(version_starting, "HTTP/1.0", 8))
             {
-                req->version = HTTP_VERSION_10;
+                str = bsp_new_string("1.0", 3);
             }
             else if (0 == strncmp(version_starting, "HTTP/1.1", 8))
             {
-                req->version = HTTP_VERSION_11;
+                str = bsp_new_string("1.1", 3);
             }
             else if (0 == strncmp(version_starting, "HTTP/2.0", 8))
             {
-                req->version = HTTP_VERSION_20;
+                str = bsp_new_string("2.0", 3);
             }
             else
             {
-                req->version = HTTP_VERSION_UNKNOWN;
+                str = bsp_new_string("UNKNOWN", 7);
             }
 
             break;
         }
     }
 
+    V_SET_STRING(val, str);
+    str = bsp_new_string("VERSION", 7);
+    bsp_object_set_hash(req, str, val);
+
     return;
 }
 
-static void _parse_http_request_header(BSPD_HTTP_REQUEST *req, const char *input, size_t len)
+static void _parse_http_request_header(BSP_OBJECT *req, const char *input, size_t len)
 {
+    if (!req)
+    {
+        return;
+    }
+
     const char *v_starting = NULL;
     const char *v_endding = NULL;
     BSP_STRING *key = NULL;
-    BSP_STRING *value = NULL;
+    BSP_STRING *str = NULL;
+    BSP_VALUE *val = NULL;
     size_t ml;
     for (ml = 0; ml < len; ml ++)
     {
@@ -241,25 +281,24 @@ static void _parse_http_request_header(BSPD_HTTP_REQUEST *req, const char *input
             v_endding = input + ml;
         }
 
-        value = bsp_new_string(v_starting, (v_endding - v_starting));
+        str = bsp_new_string(v_starting, (v_endding - v_starting));
         bsp_str_toupper(key);
-        STR_STDERR(key);
-        fprintf(stderr, " => ");
-        STR_STDERR(value);
-        fprintf(stderr, "\n");
+        val = bsp_new_value();
+        V_SET_STRING(val, str);
+        bsp_object_set_hash(req, key, val);
     }
 
     return;
 }
 
-static BSPD_HTTP_REQUEST * _parse_http_request(const char *data, size_t len)
+static void _parse_http_request(BSPD_BARED *bared, const char *data, size_t len)
 {
-    BSPD_HTTP_REQUEST *req = NULL;
+    BSP_OBJECT *req = NULL;
     char *header_endding = (char *) memmem(data, len, "\r\n\r\n", 4);
     if (header_endding)
     {
         // Valid HTTP header
-        req = bsp_mempool_alloc(mp_http_request);
+        req = bsp_new_object(BSP_OBJECT_HASH);
         if (!req)
         {
             return NULL;
@@ -269,7 +308,7 @@ static BSPD_HTTP_REQUEST * _parse_http_request(const char *data, size_t len)
 
         const char *line_beginning = strstr(data, "\r\n") + 2;
         const char *line_endding = header_endding;
-        while (req)
+        while (BSP_TRUE)
         {
             line_endding = strstr(line_beginning, "\r\n");
             if (!line_endding)
@@ -286,9 +325,10 @@ static BSPD_HTTP_REQUEST * _parse_http_request(const char *data, size_t len)
                 break;
             }
         }
-    }
 
-    return req;
+        bared->proced = (header_endding - data) + 4;
+        bared->proto = req;
+    }
 }
 
 size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len)
@@ -298,12 +338,29 @@ size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len)
         if (!bared->proto)
         {
             // New HTTP request
-            BSPD_HTTP_REQUEST *req = _parse_http_request(data, len);
-            bared->proto = req;
+            bared->expectation = 0;
+            bared->proced = 0;
+            _parse_http_request(bared, data, len);
+        }
+
+        // Subsequent data
+        if (bared->expectation > 0)
+        {
+            // Query data
+            if (len >= (bared->proced + bared->expectation))
+            {
+                bared->data = bsp_new_const_string(data + bared->proced, bared->expectation);
+                bared->proced += bared->expectation;
+                bared->bared = BSP_TRUE;
+            }
+        }
+        else
+        {
+            bared->bared = BSP_TRUE;
         }
     }
 
-    return len;
+    return bared->proced;
 }
 
 size_t http_pack_data(BSPD_BARED *packed, const char *data, size_t len)

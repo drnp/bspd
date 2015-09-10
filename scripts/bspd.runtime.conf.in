@@ -2,7 +2,7 @@
     "global" : {
         "daemonize" : false, 
         "trace_level" : "notice", 
-        "script" : "/home/np/Projects/qground/lua/qground.lua", 
+        "script" : "script/bspd.main.lua", 
         "lua_hook_load" : "main"
     }, 
     "servers" : [
@@ -35,8 +35,11 @@
             "port" : 27000, 
             "type" : "http", 
             "data_type" : "raw", 
-            "debug_input" : true, 
-            "debug_output" : true
+            "debug_input" : false, 
+            "debug_output" : false, 
+            "lua_hook_connect" : "server_connect", 
+            "lua_hook_disconnect" : "server_disconnect", 
+            "lua_hook_data" : "server_data"
         }
     ]
 }
