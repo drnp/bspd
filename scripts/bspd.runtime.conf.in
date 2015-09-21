@@ -3,7 +3,8 @@
         "daemonize" : false, 
         "trace_level" : "notice", 
         "script" : "script/bspd.main.lua", 
-        "lua_hook_load" : "main"
+        "lua_hook_load" : "main", 
+        "enable_main_clock" : false
     }, 
     "servers" : [
         {

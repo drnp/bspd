@@ -3,22 +3,24 @@
 
 local _data_proto = function(fd, proto)
     print('Client ' .. fd .. ' send proto-only request :');
-    bsp_var_dump(proto);
-    bsp_net_send(fd, "OK");
+    --bsp_var_dump(proto);
+    bsp_net_send(fd, proto.REQUEST_URI .. " is a BIG SB!!!");
+    --bsp_net_close(fd);
 end
 
 local _data_stream = function(fd, stream, proto)
-    print('Client ' .. fd .. ' send stream : ' .. stream);
+    --print('Client ' .. fd .. ' send stream : ' .. stream);
 end
 
 local _data_object = function(fd, object, proto)
-    print('Client ' .. fd .. ' send object :');
+    --print('Client ' .. fd .. ' send object :');
     bsp_var_dump(object);
 end
 
 local _data_command = function(fd, cmd, params, proto)
-    print('Client ' .. fd .. ' send command ' .. cmd .. ' with params :');
-    bsp_var_dump(params);
+    --print('Client ' .. fd .. ' send command ' .. cmd .. ' with params :');
+    --print(cmd);
+    --bsp_var_dump(params);
 end
 
 function server_connect(fd)

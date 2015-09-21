@@ -82,6 +82,7 @@ static void _worker_on_poke(BSP_THREAD *t)
                 {
                     task->follow_up(task->arg);
                 }
+
                 break;
         }
 
@@ -102,6 +103,7 @@ static ssize_t _proc_raw(struct bspd_bare_data_t *bared, BSP_SOCKET_CLIENT *clt,
     if (bared->data)
     {
         ret = STR_LEN(bared->data);
+        debug_hex(STR_STR(bared->data), STR_LEN(bared->data));
     }
 
     BSPD_SCRIPT_TASK *task = new_script_task(BSPD_SCRIPT_TASK_RAW);
@@ -404,7 +406,9 @@ static int _bspd_on_disconnect(BSP_SOCKET_CLIENT *clt)
         if (bared)
         {
             bsp_del_string(bared->data);
+            bared->data = NULL;
             bsp_del_object(bared->proto);
+            bared->proto = NULL;
             bsp_mempool_free(mp_bared, bared);
         }
     }
@@ -504,6 +508,9 @@ static size_t _bspd_on_data(BSP_SOCKET_CLIENT *clt, const char *data, size_t len
         if (!bared)
         {
             bared = bsp_mempool_alloc(mp_bared);
+            bared->data = NULL;
+            bared->proto = NULL;
+            bared->bared = 0;
             FD_ADD_SET(f, BSPD_FD_ADD_BARED, bared);
         }
 
@@ -616,6 +623,7 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
     }
 
     size_t ret = 0;
+    BSPD_BARED *packed = NULL;
     if (BSPD_DATA_PACKET == prop->data_type)
     {
         // Stream packet
@@ -659,7 +667,6 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
         else
         {
             BSP_STRING *src = bsp_new_string(NULL, 1);
-            BSPD_BARED *packed = NULL;
             if (src)
             {
                 packed = (BSPD_BARED *) FD_ADD_GET(f, BSPD_FD_ADD_BARED);
@@ -687,6 +694,7 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
 
                         ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
                         bsp_del_string(packed->data);
+                        packed->data = NULL;
                     }
                 }
 
@@ -710,7 +718,13 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
         }
         else
         {
-            BSPD_BARED *packed = bsp_mempool_alloc(mp_bared);
+            packed = (BSPD_BARED *) FD_ADD_GET(f, BSPD_FD_ADD_BARED);
+            if (!packed)
+            {
+                packed = bsp_mempool_alloc(mp_bared);
+                FD_ADD_SET(f, BSPD_FD_ADD_BARED, packed);
+            }
+
             if (packed)
             {
                 packer(packed, STR_STR(data), STR_LEN(data));
@@ -725,9 +739,8 @@ static size_t _real_send(BSP_SOCKET_CLIENT *clt, unsigned char hdr, BSP_STRING *
 
                     ret = bsp_socket_append(&clt->sck, STR_STR(packed->data), STR_LEN(packed->data));
                     bsp_del_string(packed->data);
+                    packed->data = NULL;
                 }
-
-                bsp_mempool_free(mp_bared, packed);
             }
         }
     }
@@ -1224,20 +1237,24 @@ int bspd_startup()
         }
     }
 
-    t = bsp_get_thread(BSP_THREAD_BOSS, 0);
-    if (t)
+    // Main clock
+    if (BSP_TRUE == c->enable_main_clock)
     {
-        struct timespec one_hz = {.tv_sec = 1, .tv_nsec = 0};
-        BSP_TIMER *base_clock = bsp_new_timer(t->event_container, &one_hz, &one_hz, -1);
-        if (base_clock)
+        t = bsp_get_thread(BSP_THREAD_BOSS, 0);
+        if (t)
         {
-            base_clock->on_timer = _on_base_clock;
-        }
-        else
-        {
-            fprintf(stderr, "No base timer\n");
+            struct timespec one_hz = {.tv_sec = 1, .tv_nsec = 0};
+            BSP_TIMER *base_clock = bsp_new_timer(t->event_container, &one_hz, &one_hz, -1);
+            if (base_clock)
+            {
+                base_clock->on_timer = _on_base_clock;
+            }
+            else
+            {
+                fprintf(stderr, "No base timer\n");
 
-            return bsp_shutdown();
+                return bsp_shutdown();
+            }
         }
     }
 

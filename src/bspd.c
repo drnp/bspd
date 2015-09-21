@@ -67,6 +67,7 @@ int main(int argc, char *const *argv)
     bzero(&global_config, sizeof(BSPD_CONFIG));
     global_config.verbose = BSP_FALSE;
     global_config.daemonize = BSP_FALSE;
+    global_config.enable_main_clock = BSP_TRUE;
     int c;
     char config_file[_POSIX_PATH_MAX];
     snprintf(config_file, _POSIX_PATH_MAX - 1, "%s/%s", BSPD_PREFIX_DIR, BSPD_CONF_FILE);

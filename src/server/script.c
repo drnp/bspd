@@ -618,7 +618,6 @@ int call_script(BSPD_SCRIPT *scrt, BSPD_SCRIPT_TASK *task)
     {
         case BSPD_SCRIPT_TASK_CTL : 
             lua_pushinteger(scrt->state, (lua_Integer) task->clt);
-            //lua_pushstring(scrt->state, (const char *) task->ptr);
             nargs = 1;
             break;
         case BSPD_SCRIPT_TASK_RAW : 
@@ -758,6 +757,8 @@ BSPD_SCRIPT_TASK * new_script_task(BSPD_SCRIPT_TASK_TYPE type)
     {
         task->type = type;
         task->next = NULL;
+        task->data = NULL;
+        task->proto = NULL;
     }
 
     return task;
@@ -820,10 +821,8 @@ int push_script_task(BSPD_SCRIPT_TASK *task)
     {
         task_queue_tail->next = task;
     }
-    else
-    {
-        task_queue_tail = task;
-    }
+
+    task_queue_tail = task;
 
     // Tell worker
     bsp_poke_event_container(t->event_container);

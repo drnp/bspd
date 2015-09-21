@@ -71,6 +71,7 @@ typedef struct bspd_config_t
                         opt;
     BSP_BOOLEAN         verbose;
     BSP_BOOLEAN         daemonize;
+    BSP_BOOLEAN         enable_main_clock;
     const char          *script;
     const char          *lua_hook_load;
 

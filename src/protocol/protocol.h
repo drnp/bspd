@@ -79,23 +79,172 @@ typedef enum bspd_http_request_method_e
 #define BSPD_HTTP_METHOD_CONNECT        BSPD_HTTP_METHOD_CONNECT
 } BSPD_HTTP_REQUEST_METHOD;
 
-typedef struct bspd_http_request_t
+typedef enum bspd_http_connection_type_e
 {
+    BSPD_HTTP_CONNECTION_CLOSE
+                        = 0, 
+#define BSPD_HTTP_CONNECTION_CLOSE      BSPD_HTTP_CONNECTION_CLOSE
+    BSPD_HTTP_CONNECTION_KEEP_ALIVE
+                        = 1, 
+#define BSPD_HTTP_CONNECTION_KEEP_ALIVE BSPD_HTTP_CONNECTION_KEEP_ALIVE
+    BSPD_HTTP_CONNECTION_UPGRADE
+                        = 255
+#define BSPD_HTTP_CONNECTION_UPGRADE    BSPD_HTTP_CONNECTION_UPGRADE
+} BSPD_HTTP_CONNECTION_TYPE;
+
+typedef enum bspd_http_status_code_t
+{
+    BSPD_HTTP_STATUS_CONTINUE
+                        = 100, 
+#define BSPD_HTTP_STATUS_CONTINUE       BSPD_HTTP_STATUS_CONTINUE
+    BSPD_HTTP_STATUS_SWITCHING
+                        = 101, 
+#define BSPD_HTTP_STATUS_SWITCHING      BSPD_HTTP_STATUS_SWITCHING
+    BSPD_HTTP_STATUS_OK
+                        = 200, 
+#define BSPD_HTTP_STATUS_OK             BSPD_HTTP_STATUS_OK
+    BSPD_HTTP_STATUS_CREATED
+                        = 201, 
+#define BSPD_HTTP_STATUS_CREATED        BSPD_HTTP_STATUS_CREATED
+    BSPD_HTTP_STATUS_ACCEPTED
+                        = 202, 
+#define BSPD_HTTP_STATUS_ACCEPTED       BSPD_HTTP_STATUS_ACCEPTED
+    BSPD_HTTP_STATUS_NON_AUTHORITATIVE
+                        = 203, 
+#define BSPD_HTTP_STATUS_NON_AUTHORITATIVE
+                                        BSPD_HTTP_STATUS_NON_AUTHORITATIVE
+    BSPD_HTTP_STATUS_NO_CONTENT
+                        = 204, 
+#define BSPD_HTTP_STATUS_NO_CONTENT     BSPD_HTTP_STATUS_NO_CONTENT
+    BSPD_HTTP_STATUS_RESET_CONTENT
+                        = 205, 
+#define BSPD_HTTP_STATUS_RESET_CONTENT  BSPD_HTTP_STATUS_RESET_CONTENT
+    BSPD_HTTP_STATUS_PARTIAL_CONTENT
+                        = 206, 
+#define BSPD_HTTP_STATUS_PARTIAL_CONTENT
+                                        BSPD_HTTP_STATUS_PARTIAL_CONTENT
+    BSPD_HTTP_STATUS_MULTIPLE_CHOICES
+                        = 300, 
+#define BSPD_HTTP_STATUS_MULTIPLE_CHOICES
+                                        BSPD_HTTP_STATUS_MULTIPLE_CHOICES
+    BSPD_HTTP_STATUS_MOVED_PERMANENTLY
+                        = 301, 
+#define BSPD_HTTP_STATUS_MOVED_PERMANENTLY
+                                        BSPD_HTTP_STATUS_MOVED_PERMANENTLY
+    BSPD_HTTP_STATUS_FOUND
+                        = 302, 
+#define BSPD_HTTP_STATUS_FOUND          BSPD_HTTP_STATUS_FOUND
+    BSPD_HTTP_STATUS_SEE_OTHER
+                        = 303, 
+#define BSPD_HTTP_STATUS_SEE_OTHER      BSPD_HTTP_STATUS_SEE_OTHER
+    BSPD_HTTP_STATUS_NOT_MODIFIED
+                        = 304, 
+#define BSPD_HTTP_STATUS_NOT_MODIFIED   BSPD_HTTP_STATUS_NOT_MODIFIED
+    BSPD_HTTP_STATUS_USE_PROXY
+                        = 305, 
+#define BSPD_HTTP_STATUS_USE_PROXY      BSPD_HTTP_STATUS_USE_PROXY
+    BSPD_HTTP_STATUS_UNUSED
+                        = 306, 
+#define BSPD_HTTP_STATUS_UNUSED         BSPD_HTTP_STATUS_UNUSED
+    BSPD_HTTP_STATUS_TEMPORARY_REDIRECT
+                        = 307, 
+#define BSPD_HTTP_STATUS_TEMPORARY_REDIRECT
+                                        BSPD_HTTP_STATUS_TEMPORARY_REDIRECT
+    BSPD_HTTP_STATUS_BAD_REQUEST
+                        = 400, 
+#define BSPD_HTTP_STATUS_BAD_REQUEST    BSPD_HTTP_STATUS_BAD_REQUEST
+    BSPD_HTTP_STATUS_UNAUTHORIZED
+                        = 401, 
+#define BSPD_HTTP_STATUS_UNAUTHORIZED   BSPD_HTTP_STATUS_UNAUTHORIZED
+    BSPD_HTTP_STATUS_PAYMENT_REQUEST
+                        = 402, 
+#define BSPD_HTTP_STATUS_PAYMENT_REQUEST
+                                        BSPD_HTTP_STATUS_PAYMENT_REQUEST
+    BSPD_HTTP_STATUS_FORBIDDEN
+                        = 403, 
+#define BSPD_HTTP_STATUS_FORBIDDEN      BSPD_HTTP_STATUS_FORBIDDEN
+    BSPD_HTTP_STATUS_NOT_FOUND
+                        = 404, 
+#define BSPD_HTTP_STATUS_NOT_FOUND      BSPD_HTTP_STATUS_NOT_FOUND
+    BSPD_HTTP_STATUS_METHOD_NOT_ALLOWED
+                        = 405, 
+#define BSPD_HTTP_STATUS_METHOD_NOT_ALLOWED
+                                        BSPD_HTTP_STATUS_METHOD_NOT_ALLOWED
+    BSPD_HTTP_STATUS_NOT_ACCEPTABLE
+                        = 406, 
+#define BSPD_HTTP_STATUS_NOT_ACCEPTABLE BSPD_HTTP_STATUS_NOT_ACCEPTABLE
+    BSPD_HTTP_STATUS_PROXY_AUTHONTICATION
+                        = 407, 
+#define BSPD_HTTP_STATUS_PROXY_AUTHONTICATION
+                                        BSPD_HTTP_STATUS_PROXY_AUTHONTICATION
+    BSPD_HTTP_STATUS_REQUEST_TIMEOUT
+                        = 408, 
+#define BSPD_HTTP_STATUS_REQUEST_TIMEOUT
+                                        BSPD_HTTP_STATUS_REQUEST_TIMEOUT
+    BSPD_HTTP_STATUS_CONFLICT
+                        = 409, 
+#define BSPD_HTTP_STATUS_CONFLICT       BSPD_HTTP_STATUS_CONFLICT
+    BSPD_HTTP_STATUS_GONE
+                        = 410, 
+#define BSPD_HTTP_STATUS_GONE           BSPD_HTTP_STATUS_GONE
+    BSPD_HTTP_STATUS_LENGTH_REQUIRED
+                        = 411, 
+#define BSPD_HTTP_STATUS_LENGTH_REQUIRED
+                                        BSPD_HTTP_STATUS_LENGTH_REQUIRED
+    BSPD_HTTP_STATUS_PRECONDITON_FAILED
+                        = 412, 
+#define BSPD_HTTP_STATUS_PRECONDITON_FAILED
+                                        BSPD_HTTP_STATUS_PRECONDITON_FAILED
+    BSPD_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE
+                        = 413, 
+#define BSPD_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE
+                                        BSPD_HTTP_STATUS_REQUEST_ENTITY_TOO_LARGE
+    BSPD_HTTP_STATUS_REQUEST_URI_TOO_LONG
+                        = 414, 
+#define BSPD_HTTP_STATUS_REQUEST_URI_TOO_LONG
+                                        BSPD_HTTP_STATUS_REQUEST_URI_TOO_LONG
+    BSPD_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE
+                        = 415, 
+#define BSPD_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE
+                                        BSPD_HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE
+    BSPD_HTTP_STATUS_EXPECTATION_FAILED
+                        = 415, 
+#define BSPD_HTTP_STATUS_EXPECTATION_FAILED
+                                        BSPD_HTTP_STATUS_EXPECTATION_FAILED
+    BSPD_HTTP_STATUS_INTERNAL_SERVER_ERROR
+                        = 500, 
+#define BSPD_HTTP_STATUS_INTERNAL_SERVER_ERROR
+                                        BSPD_HTTP_STATUS_INTERNAL_SERVER_ERROR
+    BSPD_HTTP_STATUS_NOT_IMPLEMENTED
+                        = 501, 
+#define BSPD_HTTP_STATUS_NOT_IMPLEMENTED
+                                        BSPD_HTTP_STATUS_NOT_IMPLEMENTED
+    BSPD_HTTP_STATUS_BAD_GATEWAY
+                        = 502, 
+#define BSPD_HTTP_STATUS_BAD_GATEWAY    BSPD_HTTP_STATUS_BAD_GATEWAY
+    BSPD_HTTP_STATUS_SERVICE_UNAVAILABLE
+                        = 503, 
+#define BSPD_HTTP_STATUS_SERVICE_UNAVAILABLE
+                                        BSPD_HTTP_STATUS_SERVICE_UNAVAILABLE
+    BSPD_HTTP_STATUS_GATEWAY_TIMEOUT
+                        = 504, 
+#define BSPD_HTTP_STATUS_GATEWAY_TIMEOUT
+                                        BSPD_HTTP_STATUS_GATEWAY_TIMEOUT
+    BSPD_HTTP_STATUS_VERSION_NOT_SUPPORTED
+                        = 505
+#define BSPD_HTTP_STATUS_VERSION_NOT_SUPPORTED
+                                        BSPD_HTTP_STATUS_VERSION_NOT_SUPPORTED
+} BSPD_HTTP_STATUS_CODE;
+
+typedef struct bspd_http_response_t
+{
+    BSPD_HTTP_STATUS_CODE
+                        status;
     int                 version;
-    BSPD_HTTP_REQUEST_METHOD
-                        method;
-    BSP_STRING          *request_uri;
-
-    char                *host;
-    int                 port;
-    char                *referer;
-    char                *user_agent;
-    char                *accept;
-
-    char                *cookie;
-    BSP_OBJECT          *params;
-    BSP_STRING          *raw_post_data;
-} BSPD_HTTP_REQUEST;
+    size_t              content_length;
+    BSPD_HTTP_CONNECTION_TYPE
+                        connection;
+} BSPD_HTTP_RESPONSE;
 
 // Internal server
 int proto_internal_init();

@@ -42,6 +42,7 @@
 
 static BSP_SPINLOCK log_lock = BSP_SPINLOCK_INITIALIZER;
 static BSP_SPINLOCK binary_log_lock = BSP_SPINLOCK_INITIALIZER;
+static BSP_SPINLOCK trace_lock = BSP_SPINLOCK_INITIALIZER;
 static FILE *log_fp = NULL;
 static FILE *binary_log_fp = NULL;
 
@@ -60,6 +61,7 @@ static void _dump_value(BSP_VALUE *val, int layer)
     BSP_STRING *str = NULL;
     BSP_OBJECT *sub_obj = NULL;
     ssize_t ret;
+    fprintf(stderr, "(%p) ", val);
     switch (val->type)
     {
         case BSP_VALUE_NULL : 
@@ -87,8 +89,8 @@ static void _dump_value(BSP_VALUE *val, int layer)
             fprintf(stderr, "\033[1;33m(BOOLEAN)\033[0m : %s\n", (BSP_TRUE == V_GET_BOOLEAN(val)) ? "true" : "false");
             break;
         case BSP_VALUE_STRING : 
-            fprintf(stderr, "\033[1;32m(STRING)\033[0m : ");
             str = V_GET_STRING(val);
+            fprintf(stderr, "\033[1;32m(STRING)\033[0m (%p) : ", str);
             if (str && STR_STR(str))
             {
                 ret = write(STDERR_FILENO, STR_STR(str), STR_LEN(str));
@@ -105,8 +107,8 @@ static void _dump_value(BSP_VALUE *val, int layer)
             fprintf(stderr, "\n");
             break;
         case BSP_VALUE_OBJECT : 
-            fprintf(stderr, "\033[1;36m(OBJECT)\033[0m : ");
             sub_obj = V_GET_OBJECT(val);
+            fprintf(stderr, "\033[1;36m(OBJECT)\033[0m (%p) : ", sub_obj);
             _dump_object(sub_obj, layer + 1);
             break;
         case BSP_VALUE_POINTER : 
@@ -205,9 +207,11 @@ void debug_object(BSP_OBJECT *obj)
         return;
     }
 
-    fprintf(stderr, "\n\033[1;37m=== [Debug Object] === < START > ===\033[0m\n");
+    bsp_spin_lock(&trace_lock);
+    fprintf(stderr, "\n\033[1;37m=== [Debug Object : %p] === < START > ===\033[0m\n", (void *) obj);
     _dump_object(obj, 0);
-    fprintf(stderr, "\033[1;37m=== [Debug Object] === < END > ===\033[0m\n\n");
+    fprintf(stderr, "\033[1;37m=== [Debug Object : %p] === < END > ===\033[0m\n\n", (void *) obj);
+    bsp_spin_unlock(&trace_lock);
 
     return;
 }
@@ -221,9 +225,11 @@ void debug_value(BSP_VALUE *val)
         return;
     }
 
-    fprintf(stderr, "\n\033[1;37m=== [Debug Value] === < START > ===\033[0m\n");
+    bsp_spin_lock(&trace_lock);
+    fprintf(stderr, "\n\033[1;37m=== [Debug Value : %p] === < START > ===\033[0m\n", (void *) val);
     _dump_value(val, 0);
-    fprintf(stderr, "\033[1;37m=== [Debug Value] === < END > ===\033[0m\n\n");
+    fprintf(stderr, "\033[1;37m=== [Debug Value : %p] === < END > ===\033[0m\n\n", (void *) val);
+    bsp_spin_unlock(&trace_lock);
 
     return;
 }
@@ -243,7 +249,8 @@ void debug_hex(const char *data, size_t len)
     char tgdate[64];
     localtime_r(&now, &loctime);
     strftime(tgdate, 64, "%m/%d/%Y %H:%M:%S", &loctime);
-    fprintf(stderr, "\n\033[1;37m=== [Debug Hex %d bytes] === <%s ORIGIN > ===\033[0m\n", (int) len, tgdate);
+    bsp_spin_lock(&trace_lock);
+    fprintf(stderr, "\n\033[1;37m=== [Debug Hex : %p (%d bytes)]) === <%s ORIGIN > ===\033[0m\n", (void *) data, (int) len, tgdate);
     for (i = 0; i < len; i ++)
     {
         fprintf(stderr, "\033[1;33m%02X\033[0m ", (unsigned char) data[i]);
@@ -257,7 +264,7 @@ void debug_hex(const char *data, size_t len)
         }
     }
 
-    fprintf(stderr, "\n\033[1;37m=== [Debug Hex %d bytes] === <%s DATA   > ===\033[0m\n", (int) len, tgdate);
+    fprintf(stderr, "\n\033[1;37m=== [Debug Hex : %p (%d bytes]) === <%s DATA   > ===\033[0m\n", (void *) data, (int) len, tgdate);
     for (i = 0; i < len; i ++)
     {
         if (data[i] >= 32 && data[i] <= 127)
@@ -280,6 +287,7 @@ void debug_hex(const char *data, size_t len)
     }
 
     fprintf(stderr, "\n\033[1;37m=== [Debug Hex %d bytes] === <%s END    > ===\033[0m\n\n", (int) len, tgdate);
+    bsp_spin_unlock(&trace_lock);
 
     return;
 }
@@ -292,13 +300,15 @@ void debug_lua_stack(lua_State *s)
     }
 
     int i;
-    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack %p] ===\033[0m\n", (void *) s);
+    bsp_spin_lock(&trace_lock);
+    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack : %p] ===\033[0m\n", (void *) s);
     for (i = 1; i <= lua_gettop(s); i ++)
     {
         fprintf(stderr, " \033[1;35m%d\033[0m => \033[1;34m%s\033[0m\n", i, lua_typename(s, lua_type(s, i)));
     }
 
-    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack END] ===\033[0m\n");
+    fprintf(stderr, "\n\033[1;37m=== [Debug LUA stack : %p] ===\033[0m\n", (void *) s);
+    bsp_spin_unlock(&trace_lock);
 
     return;
 }
@@ -330,6 +340,7 @@ void show_trace(BSP_TRACE *bt)
 
     localtime_r(&bt->localtime, &loctime);
     strftime(tgdata, 64, "%m/%d/%Y %H:%M:%S", &loctime);
+    bsp_spin_lock(&trace_lock);
     fprintf(stderr, "\033[1;37m[\033[0m"
                     "\033[0;36m%s\033[0m"
                     "\033[1;37m]\033[0m"
@@ -341,6 +352,7 @@ void show_trace(BSP_TRACE *bt)
                     "\033[1;35m%s\033[0m"
                     "\033[1;37m]\033[0m"
                     " : %s\n", tgdata, lstr[idx], bt->tag, bt->msg);
+    bsp_spin_unlock(&trace_lock);
 
     return;
 }

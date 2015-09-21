@@ -429,6 +429,12 @@ int parse_conf(BSP_OBJECT *conf)
                 c->lua_hook_load = bsp_strndup(STR_STR(str), STR_LEN(str));
             }
         }
+
+        sub = bsp_object_value_hash_original(global, "enable_main_clock");
+        if (sub)
+        {
+            c->enable_main_clock = V_GET_BOOLEAN(sub);
+        }
     }
     else
     {

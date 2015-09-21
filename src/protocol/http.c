@@ -363,7 +363,68 @@ size_t http_bare_data(BSPD_BARED *bared, const char *data, size_t len)
     return bared->proced;
 }
 
+/* * * Response * * */
+static void _build_http_response_header(BSPD_BARED *packed, BSPD_HTTP_RESPONSE *resp)
+{
+    if (!packed || !resp)
+    {
+        return;
+    }
+
+    if (packed->data)
+    {
+        bsp_del_string(packed->data);
+    }
+
+    packed->data = bsp_new_string(NULL, 0);
+    if (!packed->data)
+    {
+        return;
+    }
+
+    switch (resp->version)
+    {
+        case HTTP_VERSION_09 : 
+            bsp_string_printf(packed->data, "HTTP/0.9 %d STATUS\r\n", (int) resp->status);
+            break;
+        case HTTP_VERSION_10 : 
+            bsp_string_printf(packed->data, "HTTP/1.0 %d STATUS\r\n", (int) resp->status);
+            break;
+        case HTTP_VERSION_11 : 
+            bsp_string_printf(packed->data, "HTTP/1.1 %d STATUS\r\n", (int) resp->status);
+            break;
+        case HTTP_VERSION_20 : 
+            bsp_string_printf(packed->data, "HTTP/2.0 %d STATUS\r\n", (int) resp->status);
+            break;
+        default :
+            break;
+    }
+
+    bsp_string_append(packed->data, "Server: BSPD HTTP service\r\n", -1);
+    bsp_string_printf(packed->data, "Content-Length: %llu\r\n", (unsigned long long) resp->content_length);
+    bsp_string_append(packed->data, "Connection: Close\r\n", -1);
+
+    bsp_string_append(packed->data, "\r\n", -1);
+
+    return;
+}
+
 size_t http_pack_data(BSPD_BARED *packed, const char *data, size_t len)
 {
-    return 0;
+    if (packed)
+    {
+        BSPD_HTTP_RESPONSE resp;
+        resp.version = HTTP_VERSION_11;
+        resp.connection = BSPD_HTTP_CONNECTION_CLOSE;
+        resp.content_length = len;
+        resp.status = BSPD_HTTP_STATUS_OK;
+
+        _build_http_response_header(packed, &resp);
+        if (packed->data)
+        {
+            bsp_string_append(packed->data, data, len);
+        }
+    }
+
+    return len;
 }
